@@ -1607,7 +1607,8 @@ function jpegFileName(file) {
 }
 
 const AUTHOR_COVER_MAX_BYTES = 5 * 1024 * 1024;
-const AUTHOR_COVER_MAX_WIDTH = 1600;
+const AUTHOR_COVER_ASPECT_RATIO = 2 / 3;
+const AUTHOR_COVER_TARGET_WIDTHS = [1200, 1000, 800, 600];
 const AUTHOR_COVER_JPEG_QUALITY = 0.85;
 const AUTHOR_COVER_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -1689,30 +1690,35 @@ async function optimizeAuthorCoverImage(file) {
   validateAuthorCoverFile(file);
   const originalSize = file.size;
   setAuthorCoverUploadStatus(
-    `حجم الغلاف الحالي ${formatFileSize(originalSize)}. سنضغطه تلقائيا قبل الرفع.`,
+    `تم اختيار الغلاف. سنقصه بنسبة 2:3 ونضغطه تلقائيا قبل الرفع.`,
     10,
     true,
   );
   route();
 
   const image = await loadImageFromFile(file);
-  const shouldOptimize =
-    file.size > AUTHOR_COVER_MAX_BYTES ||
-    file.type !== "image/jpeg" ||
-    image.naturalWidth > AUTHOR_COVER_MAX_WIDTH;
-  if (!shouldOptimize) return file;
-
-  setAuthorCoverUploadStatus("جار ضغط وتحسين الغلاف قبل الرفع...", 35, true);
+  setAuthorCoverUploadStatus("جار ضبط قياس الغلاف وقصه تلقائيا...", 35, true);
   route();
 
-  const widths = [AUTHOR_COVER_MAX_WIDTH, 1400, 1200, 1000, 800];
   const qualities = [AUTHOR_COVER_JPEG_QUALITY, 0.75, 0.65];
   let bestBlob = null;
+  const sourceRatio = image.naturalWidth / image.naturalHeight;
+  let sourceX = 0;
+  let sourceY = 0;
+  let sourceWidth = image.naturalWidth;
+  let sourceHeight = image.naturalHeight;
 
-  for (const maxWidth of widths) {
-    const scale = Math.min(1, maxWidth / image.naturalWidth);
-    const width = Math.max(1, Math.round(image.naturalWidth * scale));
-    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  if (sourceRatio > AUTHOR_COVER_ASPECT_RATIO) {
+    sourceWidth = image.naturalHeight * AUTHOR_COVER_ASPECT_RATIO;
+    sourceX = (image.naturalWidth - sourceWidth) / 2;
+  } else if (sourceRatio < AUTHOR_COVER_ASPECT_RATIO) {
+    sourceHeight = image.naturalWidth / AUTHOR_COVER_ASPECT_RATIO;
+    sourceY = (image.naturalHeight - sourceHeight) / 2;
+  }
+
+  for (const targetWidth of AUTHOR_COVER_TARGET_WIDTHS) {
+    const width = Math.max(1, Math.min(targetWidth, Math.round(sourceWidth)));
+    const height = Math.max(1, Math.round(width / AUTHOR_COVER_ASPECT_RATIO));
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -1720,7 +1726,7 @@ async function optimizeAuthorCoverImage(file) {
     if (!context) throw new Error("تعذر تجهيز صورة الغلاف للضغط في هذا المتصفح.");
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, width, height);
-    context.drawImage(image, 0, 0, width, height);
+    context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, width, height);
 
     for (const quality of qualities) {
       const blob = await canvasToJpegBlob(canvas, quality);
@@ -1744,7 +1750,7 @@ async function uploadNovelCover(client, userId, file) {
   const optimizedFile = await optimizeAuthorCoverImage(file);
   if (optimizedFile.size > AUTHOR_COVER_MAX_BYTES) {
     throw new Error(
-      `حجم الغلاف الحالي ${formatFileSize(optimizedFile.size)}. الحد الأقصى ${formatFileSize(AUTHOR_COVER_MAX_BYTES)}.`,
+      "تعذر تصغير الغلاف تلقائيا. يمكنك نشر الرواية الآن وإضافة الغلاف لاحقا.",
     );
   }
 
@@ -2173,6 +2179,7 @@ async function saveAuthorNovel(form, requestedStatusAction = "") {
         uploadedCoverUrl = await uploadNovelCover(client, user.id, coverFile);
       } catch (coverError) {
         coverWarning = " تم الحفظ بدون الغلاف، ويمكنك إضافته لاحقا.";
+        setAuthorCoverUploadStatus("تعذر رفع الغلاف الآن. تم تجاهله مؤقتا ويمكن إضافته لاحقا.", 0, false);
         await logAuthorPortalException(client, coverError, {
           action: "upload_author_cover",
           mode,
@@ -3190,7 +3197,7 @@ function NovelForm(mode, book = books[0]) {
         <label>
           <span>غلاف اختياري</span>
           <input name="cover_file" type="file" accept="image/jpeg,image/jpg,image/png,image/webp" />
-          <small>اختر أي صورة مناسبة إن وجدت. سنضغطها تلقائيا، وإذا تعذر رفعها سنحفظ الرواية بدون غلاف.</small>
+          <small>ارفع أي صورة مناسبة. يفضل غلاف عمودي بنسبة 2:3، وسنقص الوسط ونضغط الصورة تلقائيا قبل الرفع.</small>
           <div data-author-cover-upload-status>${AuthorCoverUploadNotice()}</div>
         </label>
         <label>
@@ -3784,17 +3791,15 @@ function bindInteractions() {
       }
       try {
         validateAuthorCoverFile(file);
-        const sizeMessage = `حجم الغلاف الحالي ${formatFileSize(file.size)}. سنضغطه تلقائيا قبل الرفع.`;
+        const sizeMessage = `تم اختيار الغلاف. سنقصه بنسبة 2:3 ونضغطه تلقائيا قبل الرفع.`;
         setAuthorCoverUploadStatus(
-          file.size > AUTHOR_COVER_MAX_BYTES || file.type !== "image/jpeg"
-            ? sizeMessage
-            : `${sizeMessage} جاهز للرفع.`,
+          sizeMessage,
           0,
           false,
         );
       } catch (error) {
         setAuthorCoverUploadStatus(
-          `${error.message} حجم الملف الحالي ${formatFileSize(file.size)}. الحد الأقصى ${formatFileSize(AUTHOR_COVER_MAX_BYTES)}.`,
+          error.message,
           0,
           false,
         );

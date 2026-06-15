@@ -213,7 +213,7 @@ class SupabaseBookRepository {
   Future<Map<String, dynamic>> createBook(CreateBookInput input) {
     return _database.run(
       () async {
-        await _requireWriterOrAdminForAuthor(input.authorId);
+        await _requireCurrentUserAsAuthor(input.authorId);
         final response = await _database
             .table(SupabaseTables.books)
             .insert(input.toJson())
@@ -316,18 +316,13 @@ class SupabaseBookRepository {
     );
   }
 
-  Future<void> _requireWriterOrAdminForAuthor(String authorId) async {
+  Future<void> _requireCurrentUserAsAuthor(String authorId) async {
     final user = _database.client.auth.currentUser;
     if (user == null) {
       throw const AppSessionException('Sign in before managing novels.');
     }
     if (user.id != authorId) {
       throw const AppAuthException('Cannot create a novel for another author.');
-    }
-    final profile = await _currentProfile();
-    final role = (profile?['role'] ?? 'reader').toString();
-    if (role != 'writer' && role != 'admin') {
-      throw const AppAuthException('Creating novels requires writer or admin.');
     }
   }
 
@@ -337,7 +332,7 @@ class SupabaseBookRepository {
     final profile = await _currentProfile();
     final role = (profile?['role'] ?? 'reader').toString();
     if (role == 'admin') return;
-    if (role != 'writer' || user == null || book['author_id'] != user.id) {
+    if (user == null || book['author_id'] != user.id) {
       throw const AppAuthException('You do not own this novel.');
     }
   }

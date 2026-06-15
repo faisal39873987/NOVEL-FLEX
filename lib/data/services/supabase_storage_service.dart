@@ -34,7 +34,7 @@ class SupabaseStorageService {
   Future<SupabaseStorageUpload> uploadBookCover({
     required String bookId,
     required File file,
-    bool upsert = true,
+    bool upsert = false,
   }) {
     return uploadSecureFile(
       bucket: SupabaseStorageBuckets.bookCovers,
@@ -174,7 +174,9 @@ class SupabaseStorageService {
     required String bookId,
     required File file,
   }) {
-    return 'books/$bookId/covers/${_timestampedFileName(file)}';
+    final userId = _client.auth.currentUser?.id;
+    final prefix = userId == null || userId.isEmpty ? 'books' : userId;
+    return '$prefix/books/$bookId/covers/${_timestampedFileName(file)}';
   }
 
   String buildAuthorImagePath({
@@ -191,7 +193,9 @@ class SupabaseStorageService {
     required String chapterId,
     required File file,
   }) {
-    return 'books/$bookId/chapters/$chapterId/${_safeBaseName(file)}';
+    final userId = _client.auth.currentUser?.id;
+    final prefix = userId == null || userId.isEmpty ? 'books' : userId;
+    return '$prefix/books/$bookId/chapters/$chapterId/${_safeBaseName(file)}';
   }
 
   Future<T> _guardStorageCall<T>(

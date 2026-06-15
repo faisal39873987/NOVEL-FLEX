@@ -12,6 +12,7 @@ import 'MixScreens/Uploadscreens/upload_history_screen.dart';
 import 'Models/StatusCheckModel.dart';
 import 'Provider/UserProvider.dart';
 import 'TabScreens/MyCorner.dart';
+import 'UserAuthScreen/login_screen.dart';
 import 'Utils/Colors.dart';
 
 import 'Utils/Constants.dart';
@@ -94,12 +95,7 @@ class _TabScreenState extends State<TabScreen> with TickerProviderStateMixin {
             onTap: () => setState(() => pageIndex = 1),
           ),
           GestureDetector(
-            onTap: () {
-              setState(() {
-                _isLoading = true;
-              });
-              CHECK_STATUS();
-            },
+            onTap: _openCreateActions,
             child: Container(
                 decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -158,6 +154,23 @@ class _TabScreenState extends State<TabScreen> with TickerProviderStateMixin {
         _isLoading = false;
       });
     }
+  }
+
+  void _openCreateActions() {
+    final userProvider = context.read<UserProvider>();
+    final token = (userProvider.UserToken ?? '').trim();
+    if (userProvider.IsGuest || token.isEmpty) {
+      Transitioner(
+        context: context,
+        child: const LoginScreen(),
+        animation: AnimationType.slideLeft,
+        duration: const Duration(milliseconds: 420),
+        replacement: false,
+        curveType: CurveType.decelerate,
+      );
+      return;
+    }
+    _showSimpleDialog();
   }
 
   Future CHECK_STATUSType() async {

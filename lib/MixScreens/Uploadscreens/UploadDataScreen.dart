@@ -26,6 +26,9 @@ import '../../Utils/Constants.dart';
 import '../../Utils/toast.dart';
 import '../../Widgets/loading_widgets.dart';
 import '../../Widgets/reusable_button.dart';
+import '../../core/config/supabase_config.dart';
+import '../../data/repositories/category_repository.dart';
+import '../../data/services/mobile_author_publishing_service.dart';
 import '../../localization/Language/languages.dart';
 import 'package:language_picker/languages.dart' as lang;
 
@@ -102,6 +105,7 @@ class _UploadDataScreenState extends State<UploadDataScreen> {
   List categoryItemList = [];
   var dropDownId;
   var dropDownSub2Id;
+  final Map<int, String> _categoryUuidByLegacyId = <int, String>{};
   List<File>? DocumentFilesList;
   int fileLength = 0;
   File? imageFile;
@@ -284,8 +288,8 @@ class _UploadDataScreenState extends State<UploadDataScreen> {
                                           .name.isEmpty
                                       ? Languages.of(context)!.selectLanguage
                                       : _selectedDialogLanguage.name),
-                                  trailing:
-                                      const Icon(Icons.arrow_drop_down_outlined),
+                                  trailing: const Icon(
+                                      Icons.arrow_drop_down_outlined),
                                   onTap: _openLanguagePickerDialog,
                                 ),
                               ),
@@ -464,6 +468,22 @@ class _UploadDataScreenState extends State<UploadDataScreen> {
                                 ),
                               ),
                             ),
+                            Padding(
+                              padding: EdgeInsets.only(
+                                top: height * 0.012,
+                                left: width * 0.04,
+                                right: width * 0.04,
+                              ),
+                              child: const Text(
+                                "الغلاف اختياري. ارفع أي صورة مناسبة وسنقصها بنسبة 2:3 ونضغطها تلقائيا قبل الرفع.",
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                  fontFamily: Constants.fontfamily,
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                             SizedBox(
                               height: height * 0.05,
                             ),
@@ -487,18 +507,25 @@ class _UploadDataScreenState extends State<UploadDataScreen> {
         height: height * 0.06,
         width: width * 0.95,
         child: ResuableMaterialButton(
-          onpress: () {
-            if (_isPressed==true) {
+          onpress: () async {
+            if (_isPressed == true) {
               print("Already Press wait...");
               ToastConstant.showToast(context, "Please Wait...");
             } else {
-              _AutomaticCallApiMethod();
               setState(() {
                 _isPressed = true;
               });
+              await _AutomaticCallApiMethod();
+              if (mounted) {
+                setState(() {
+                  _isPressed = false;
+                });
+              }
             }
           },
-          buttonname: Languages.of(context)!.next,
+          buttonname: SupabaseConfig.hasEnvironment
+              ? "نشر الآن"
+              : Languages.of(context)!.next,
         ),
       ),
     );
@@ -525,7 +552,16 @@ class _UploadDataScreenState extends State<UploadDataScreen> {
     }
   }
 
-  _AutomaticCallApiMethod() {
+  Future<void> _AutomaticCallApiMethod() async {
+    if (SupabaseConfig.hasEnvironment) {
+      if (_bookTitleController!.text.trim().isNotEmpty && dropDownId != null) {
+        await _publishNovelWithSupabase();
+      } else {
+        Constants.showToastBlack(context, "اكتب عنوان الرواية واختر التصنيف.");
+      }
+      return;
+    }
+
     if (_bookTitleController!.text.isNotEmpty &&
         dropDownId != null &&
         _descriptionController!.text.isNotEmpty &&
@@ -534,6 +570,43 @@ class _UploadDataScreenState extends State<UploadDataScreen> {
     } else {
       Constants.showToastBlack(
           context, "Please fill all the fields Correctly!");
+    }
+  }
+
+  Future<void> _publishNovelWithSupabase() async {
+    if (mounted) {
+      setState(() {
+        docUploader = true;
+      });
+    }
+
+    try {
+      final result = await MobileAuthorPublishingService().publishNovel(
+        title: _bookTitleController!.text,
+        categoryId: dropDownId.toString(),
+        description: _descriptionController!.text,
+        language: _selectedDialogLanguage.isoCode,
+        coverFile: imageFile,
+      );
+      if (!mounted) return;
+      ToastConstant.showToast(
+        context,
+        result.coverSkipped
+            ? "تم نشر الرواية بدون الغلاف، ويمكنك إضافته لاحقا."
+            : "تم نشر الرواية بنجاح.",
+      );
+      await _clearPath();
+      _navigateToChapterUpload(result.bookId);
+    } catch (error) {
+      if (!mounted) return;
+      Constants.showToastBlack(context, "تعذر نشر الرواية. حاول مرة أخرى.");
+      print("supabase_publish_novel_error $error");
+    } finally {
+      if (mounted) {
+        setState(() {
+          docUploader = false;
+        });
+      }
     }
   }
 
@@ -574,9 +647,13 @@ class _UploadDataScreenState extends State<UploadDataScreen> {
         onChanged: (DropDownCategoriesModel? newItem) {
           setState(() {
             _dropDownCategoriesModel = newItem;
-            dropDownId = newItem!.categoryId;
+            dropDownId = SupabaseConfig.hasEnvironment
+                ? _categoryUuidByLegacyId[newItem!.categoryId]
+                : newItem!.categoryId;
           });
-          _callDropDownCategoriesAPISubCategories2(newItem!.categoryId);
+          if (!SupabaseConfig.hasEnvironment) {
+            _callDropDownCategoriesAPISubCategories2(newItem!.categoryId);
+          }
         },
         value: _dropDownCategoriesModel,
         isExpanded: true,
@@ -590,6 +667,42 @@ class _UploadDataScreenState extends State<UploadDataScreen> {
       _isLoading = true;
       _isInternetConnected = true;
     });
+
+    if (SupabaseConfig.hasEnvironment) {
+      try {
+        final rows = await SupabaseCategoryRepository().getActiveCategories();
+        _categoryUuidByLegacyId.clear();
+        final categories = rows.map((row) {
+          final uuid = (row['id'] ?? '').toString();
+          final legacyId = _positiveHash(uuid);
+          _categoryUuidByLegacyId[legacyId] = uuid;
+          return DropDownCategoriesModel(
+            categoryId: legacyId,
+            title: (row['name_en'] ?? row['name_ar'] ?? 'Novels').toString(),
+            titleAr: (row['name_ar'] ?? row['name_en'] ?? 'روايات').toString(),
+            isActive: row['is_active'] == false ? 0 : 1,
+            imagePath: (row['image_url'] ?? '').toString(),
+          );
+        }).toList(growable: false);
+        if (mounted) {
+          setState(() {
+            _dropDownCategoriesModelList = categories;
+            _isLoading = false;
+            subCategoriesStatus = false;
+          });
+        }
+      } catch (error) {
+        print("supabase_categories_error $error");
+        if (mounted) {
+          setState(() {
+            _dropDownCategoriesModelList = <DropDownCategoriesModel>[];
+            _isLoading = false;
+          });
+        }
+        Constants.showToastBlack(context, "تعذر تحميل التصنيفات.");
+      }
+      return;
+    }
 
     final response = await http
         .get(Uri.parse(ApiUtils.MAIN_CATEGORIES_DROPDOWN_API), headers: {
@@ -712,6 +825,20 @@ class _UploadDataScreenState extends State<UploadDataScreen> {
     );
   }
 
+  _navigateToChapterUpload(String bookId) {
+    Transitioner(
+      context: context,
+      child: BookUploadEditTabScreen(
+        bookId: bookId,
+        route: 0,
+      ),
+      animation: AnimationType.slideLeft,
+      duration: const Duration(milliseconds: 1000),
+      replacement: true,
+      curveType: CurveType.decelerate,
+    );
+  }
+
   Future _checkInternetConnectionStatus() async {
     if (mounted) {
       setState(() {
@@ -787,6 +914,19 @@ class _UploadDataScreenState extends State<UploadDataScreen> {
     });
   }
 
+  int _positiveHash(String value) {
+    var hash = 0;
+    for (final codeUnit in value.codeUnits) {
+      hash = 0x1fffffff & (hash + codeUnit);
+      hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+      hash ^= hash >> 6;
+    }
+    hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
+    hash ^= hash >> 11;
+    hash = 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
+    return hash.abs();
+  }
+
   void _openLanguagePickerDialog() => showDialog(
       context: context,
       builder: (context) => Theme(
@@ -794,7 +934,8 @@ class _UploadDataScreenState extends State<UploadDataScreen> {
           child: LanguagePickerDialog(
               titlePadding: const EdgeInsets.all(8.0),
               searchCursorColor: Colors.pinkAccent,
-              searchInputDecoration: const InputDecoration(hintText: 'Search...'),
+              searchInputDecoration:
+                  const InputDecoration(hintText: 'Search...'),
               isSearchable: true,
               title: const Text('Select your language'),
               onValuePicked: (lang.Language language) => setState(() {

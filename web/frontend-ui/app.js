@@ -2124,7 +2124,7 @@ async function loadAuthorPortal({ force = false } = {}) {
 async function saveAuthorNovel(form, requestedStatusAction = "") {
   const user = appState.auth.user;
   if (!user) {
-    appState.authorPortal.error = "يجب تسجيل الدخول ككاتب قبل الحفظ.";
+    appState.authorPortal.error = "يجب تسجيل الدخول قبل الحفظ.";
     route();
     return;
   }

@@ -43,14 +43,19 @@ void main() {
   });
 
   group('authorization guards', () {
-    test('web author and admin routes require explicit roles', () {
+    test('web author routes allow any signed-in account', () {
       final webApp = File('web/frontend-ui/app.js').readAsStringSync();
 
+      expect(webApp,
+          isNot(contains('return ["writer", "admin"].includes(role);')));
+      expect(
+          webApp, contains('const isSignedIn = Boolean(appState.auth.user);'));
+      expect(webApp, contains('function requireOwnedAuthorBook(bookId)'));
+      expect(webApp, isNot(contains('يجب تسجيل الدخول ككاتب قبل الحفظ.')));
       expect(
         webApp,
-        contains('return ["writer", "admin"].includes(role);'),
+        contains('يمكن لأي حساب مسجل إنشاء الروايات والمسودات.'),
       );
-      expect(webApp, contains('function requireOwnedAuthorBook(bookId)'));
       expect(
         webApp,
         contains('لوحة الإدارة مخصصة لحسابات role admin فقط.'),
@@ -61,11 +66,15 @@ void main() {
       final repository =
           File('lib/data/repositories/book_repository.dart').readAsStringSync();
 
-      expect(repository, contains('await _requireWriterOrAdminForAuthor'));
+      expect(repository, contains('await _requireCurrentUserAsAuthor'));
       expect(repository, contains('await _requireBookOwnership(bookId)'));
       expect(repository, contains('Future<void> deleteChapter'));
-      expect(repository, contains("role != 'writer'"));
+      expect(repository, isNot(contains("role != 'writer'")));
       expect(repository, contains("role == 'admin'"));
+      expect(
+        repository,
+        contains('Cannot create a novel for another author.'),
+      );
     });
   });
 }

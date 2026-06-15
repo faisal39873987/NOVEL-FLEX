@@ -22,6 +22,9 @@ import '../../Utils/navigation_utils.dart';
 import '../../Utils/toast.dart';
 import '../../Widgets/loading_widgets.dart';
 import '../../Widgets/reusable_button.dart';
+import '../../core/config/supabase_config.dart';
+import '../../data/repositories/book_repository.dart';
+import '../../data/services/supabase_storage_service.dart';
 import '../../localization/Language/languages.dart';
 import '../../tab_screen.dart';
 import 'UploadDataScreen.dart';
@@ -161,8 +164,6 @@ class _BookUploadEditTabScreenState extends State<BookUploadEditTabScreen>
   }
 }
 
-
-
 class UploadPdfScreen extends StatefulWidget {
   final bookId;
   final route;
@@ -174,8 +175,6 @@ class UploadPdfScreen extends StatefulWidget {
   @override
   State<UploadPdfScreen> createState() => _UploadPdfScreenState();
 }
-
-
 
 class _UploadPdfScreenState extends State<UploadPdfScreen>
     with SingleTickerProviderStateMixin {
@@ -407,7 +406,9 @@ class _UploadPdfScreenState extends State<UploadPdfScreen>
                                             padding: const EdgeInsets.only(
                                                 left: 8.0, right: 8.0),
                                             child: Text(
-                                              _pdfUploadModel!.data[index].lesson.toString(),
+                                              _pdfUploadModel!
+                                                  .data[index].lesson
+                                                  .toString(),
 
                                               // '${_bookDetailsModel!.data!.chapters![index].name!.replaceAll(".pdf", "")}',
                                               style: const TextStyle(
@@ -663,6 +664,10 @@ class _UploadPdfScreenState extends State<UploadPdfScreen>
     setState(() {
       docUploader = true;
     });
+    if (SupabaseConfig.hasEnvironment) {
+      await _uploadPdfChapterWithSupabase();
+      return;
+    }
     Map<String, String> headers = {
       'Authorization': "Bearer ${context.read<UserProvider>().UserToken}",
     };
@@ -671,7 +676,8 @@ class _UploadPdfScreenState extends State<UploadPdfScreen>
         http.MultipartRequest('POST', Uri.parse(ApiUtils.PDF_UPLOAD_API));
 
     request.fields['book_id'] = widget.bookId.toString();
-    request.fields['lesson'] = "${Languages.of(context)!.episodes}  ${_chapterController!.text.trim()}";
+    request.fields['lesson'] =
+        "${Languages.of(context)!.episodes}  ${_chapterController!.text.trim()}";
     request.fields['pdf_status'] = "1";
     http.MultipartFile document =
         await http.MultipartFile.fromPath('filename', DocumentFile!.path,
@@ -712,6 +718,64 @@ class _UploadPdfScreenState extends State<UploadPdfScreen>
         }
       });
     });
+  }
+
+  Future<void> _uploadPdfChapterWithSupabase() async {
+    try {
+      final bookId = widget.bookId.toString();
+      final title = _chapterController!.text.trim();
+      final file = DocumentFile;
+      if (title.isEmpty || file == null || !await file.exists()) {
+        Constants.showToastBlack(context, "أضف عنوان الفصل وملف PDF.");
+        if (mounted) {
+          setState(() {
+            docUploader = false;
+          });
+        }
+        return;
+      }
+
+      final books = SupabaseBookRepository();
+      final existingChapters = await books.getBookChapters(bookId);
+      final chapterNumber = existingChapters.length + 1;
+      final chapter = await books.createChapter(
+        CreateChapterInput(
+          bookId: bookId,
+          chapterNumber: chapterNumber,
+          title: "${Languages.of(context)!.episodes} $title",
+          status: 'draft',
+        ),
+      );
+      final chapterId = (chapter['id'] ?? '').toString();
+      final upload = await SupabaseStorageService().uploadPdfFile(
+        bookId: bookId,
+        chapterId: chapterId,
+        file: file,
+      );
+      await books.updateChapter(
+        chapterId,
+        <String, dynamic>{
+          'file_path': upload.path,
+          'status': 'published',
+          'published_at': DateTime.now().toUtc().toIso8601String(),
+        },
+      );
+
+      if (!mounted) return;
+      setState(() {
+        docUploader = false;
+        checkUpload = true;
+      });
+      ToastConstant.showToast(context, "تم نشر الفصل بنجاح.");
+      _showSimpleDialog();
+    } catch (error) {
+      if (!mounted) return;
+      print("supabase_pdf_upload_error $error");
+      Constants.showToastBlack(context, "تعذر رفع الفصل. حاول مرة أخرى.");
+      setState(() {
+        docUploader = false;
+      });
+    }
   }
 
   Future _callDeleteBookAPI(String id) async {
@@ -878,12 +942,6 @@ class _UploadPdfScreenState extends State<UploadPdfScreen>
   }
 }
 
-
-
-
-
-
-
 class AudioTab extends StatefulWidget {
   final bookId;
   final route;
@@ -1043,7 +1101,7 @@ class _AudioTabState extends State<AudioTab> {
         });
       }
     } else {
-      widget.route == 0 ?  UploadaudioBook() : UpdateAudioBook();
+      widget.route == 0 ? UploadaudioBook() : UpdateAudioBook();
     }
   }
 
@@ -1118,7 +1176,7 @@ class _AudioTabState extends State<AudioTab> {
     };
 
     var request =
-    http.MultipartRequest('POST', Uri.parse(ApiUtils.UPDATE_AUDIO_BOOK));
+        http.MultipartRequest('POST', Uri.parse(ApiUtils.UPDATE_AUDIO_BOOK));
 
     request.fields['bookId'] = widget.bookId.toString();
     http.MultipartFile document = await http.MultipartFile.fromPath(
@@ -1158,13 +1216,11 @@ class _AudioTabState extends State<AudioTab> {
   }
 }
 
-
-
-
 class TextTab extends StatefulWidget {
   final router;
   final bookId;
-  const TextTab({Key? key, required this.router, required this.bookId}) : super(key: key);
+  const TextTab({Key? key, required this.router, required this.bookId})
+      : super(key: key);
 
   @override
   State<TextTab> createState() => _TextTabState();
@@ -1172,7 +1228,7 @@ class TextTab extends StatefulWidget {
 
 class _TextTabState extends State<TextTab> {
   bool _isLoading = false;
-  String text= "";
+  String text = "";
   String result = '';
   bool done = false;
   bool _isInternetConnected = true;
@@ -1182,10 +1238,10 @@ class _TextTabState extends State<TextTab> {
 
   @override
   void initState() {
-   if(widget.router==1){
-     _checkInternetConnection2();
-   }
-   _descriptionController= TextEditingController();
+    if (widget.router == 1) {
+      _checkInternetConnection2();
+    }
+    _descriptionController = TextEditingController();
     super.initState();
   }
 
@@ -1200,60 +1256,55 @@ class _TextTabState extends State<TextTab> {
     var height = MediaQuery.of(context).size.height;
     var width = MediaQuery.of(context).size.width;
     return Scaffold(
-            body: _isLoading
-                ? Align(
-                    alignment: Alignment.center,
-                    child: CustomCard(
-                      gif: MoreLoadingGif(
-                        type: MoreLoadingGifType.eclipse,
-                        size: height * width * 0.0002,
-                      ),
-                      text: 'Loading',
-                    ),
-                  )
-                : SingleChildScrollView(
-                    child: Container(
-                      margin: EdgeInsets.only(
-                          top: height * 0.015,
-                          left: width * 0.02,
-                          right: width * 0.02),
-                      // height: height * 0.35,
-                      width: width * 0.95,
-                      child: TextFormField(
-                        key: _descriptionKey,
-                        controller: _descriptionController,
-                        keyboardType: TextInputType.multiline,
-                        maxLines: 1000000,
-                        textInputAction: TextInputAction.next,
-                        cursorColor: Colors.black,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: const Color(0xffebf5f9),
-                          hintText: Languages.of(context)!.writeBook
-
-                        ),
-                      ),
-                    ),
-                  ),
-            bottomNavigationBar: Container(
-              margin: EdgeInsets.only(
-                  left: 10.0, right: 10.0, bottom: height * 0.03),
+      body: _isLoading
+          ? Align(
               alignment: Alignment.center,
-              height: height * 0.06,
-              width: width * 0.95,
-              child: ResuableMaterialButton(
-                onpress: (){
-                  _checkInternetConnection();
-                },
-                buttonname: widget.router == 0
-                    ? Languages.of(context)!.Publish
-                    : Languages.of(context)!.update,
+              child: CustomCard(
+                gif: MoreLoadingGif(
+                  type: MoreLoadingGifType.eclipse,
+                  size: height * width * 0.0002,
+                ),
+                text: 'Loading',
+              ),
+            )
+          : SingleChildScrollView(
+              child: Container(
+                margin: EdgeInsets.only(
+                    top: height * 0.015,
+                    left: width * 0.02,
+                    right: width * 0.02),
+                // height: height * 0.35,
+                width: width * 0.95,
+                child: TextFormField(
+                  key: _descriptionKey,
+                  controller: _descriptionController,
+                  keyboardType: TextInputType.multiline,
+                  maxLines: 1000000,
+                  textInputAction: TextInputAction.next,
+                  cursorColor: Colors.black,
+                  decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xffebf5f9),
+                      hintText: Languages.of(context)!.writeBook),
+                ),
               ),
             ),
-          );
+      bottomNavigationBar: Container(
+        margin: EdgeInsets.only(left: 10.0, right: 10.0, bottom: height * 0.03),
+        alignment: Alignment.center,
+        height: height * 0.06,
+        width: width * 0.95,
+        child: ResuableMaterialButton(
+          onpress: () {
+            _checkInternetConnection();
+          },
+          buttonname: widget.router == 0
+              ? Languages.of(context)!.Publish
+              : Languages.of(context)!.update,
+        ),
+      ),
+    );
   }
-
-
 
   Future _UploadTextBook(var text) async {
     setState(() {
@@ -1314,8 +1365,9 @@ class _TextTabState extends State<TextTab> {
         fontSize: 14,
       );
     } else {
-      widget.router == 0 ?  _UploadTextBook(_descriptionController!.text.trim().toString()) :
-      _UpdateTextBook(_descriptionController!.text.trim().toString());
+      widget.router == 0
+          ? _UploadTextBook(_descriptionController!.text.trim().toString())
+          : _UpdateTextBook(_descriptionController!.text.trim().toString());
     }
   }
 
@@ -1332,29 +1384,26 @@ class _TextTabState extends State<TextTab> {
       print('Text_book${response.body}');
       var jsonData = json.decode(response.body);
       if (jsonData['status'] == 200) {
-
         setState(() {
-          if(jsonData['data'].toString()=="[]"){
+          if (jsonData['data'].toString() == "[]") {
             text = "";
-          }else{
+          } else {
             _descriptionController?.text = jsonData['data'][0];
           }
-          _isLoading= false;
-
+          _isLoading = false;
         });
       } else {
         ToastConstant.showToast(context, jsonData['message'].toString());
         setState(() {
-          _isLoading= false;
+          _isLoading = false;
         });
       }
     }
   }
 
   Future _checkInternetConnection2() async {
-
     setState(() {
-      _isLoading= true;
+      _isLoading = true;
     });
     if (mounted) {
       var connectivityResult = await (Connectivity().checkConnectivity());
@@ -1397,8 +1446,7 @@ class _TextTabState extends State<TextTab> {
       jsonData = json.decode(response.body);
       print('updated text response: $jsonData');
       if (jsonData['status'] == 200) {
-        ToastConstant.showToast(
-            context, "Your Text Book updated Successfully");
+        ToastConstant.showToast(context, "Your Text Book updated Successfully");
         setState(() {
           _isLoading = false;
         });
@@ -1417,6 +1465,4 @@ class _TextTabState extends State<TextTab> {
       });
     }
   }
-  
-  
 }

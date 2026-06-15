@@ -784,6 +784,7 @@ class _LoginScreenState extends State<LoginScreen> {
         nonce: rawNonce,
         userProvider: context.read<UserProvider>(),
       );
+      await _storeAppleDisplayNameIfAvailable(credential);
       if (!mounted) return;
       _navigateAndRemove();
       ToastConstant.showToast(context, "Login Successfully");
@@ -800,13 +801,55 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
       if (!mounted) return;
-      ToastConstant.showToast(context, "Apple sign-in failed: $error");
+      ToastConstant.showToast(context, _appleErrorMessage(error));
     } finally {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _storeAppleDisplayNameIfAvailable(dynamic credential) async {
+    final givenName = credential.givenName?.toString().trim() ?? '';
+    final familyName = credential.familyName?.toString().trim() ?? '';
+    final fullName = [givenName, familyName]
+        .where((part) => part.isNotEmpty)
+        .join(' ')
+        .trim();
+    if (fullName.isEmpty) return;
+
+    try {
+      await SupabaseConfig.client.auth.updateUser(
+        UserAttributes(
+          data: <String, dynamic>{
+            'full_name': fullName,
+            'name': fullName,
+            if (givenName.isNotEmpty) 'given_name': givenName,
+            if (familyName.isNotEmpty) 'family_name': familyName,
+          },
+        ),
+      );
+    } catch (_) {
+      // Apple only provides the name on first consent; login should still succeed.
+    }
+  }
+
+  String _appleErrorMessage(Object error) {
+    final message = error.toString();
+    final lowerMessage = message.toLowerCase();
+    if (lowerMessage.contains('canceled')) {
+      return "Apple sign-in was cancelled.";
+    }
+    if (lowerMessage.contains('invalid_client') ||
+        lowerMessage.contains('invalid_grant') ||
+        lowerMessage.contains('redirect_uri')) {
+      return "Apple sign-in configuration needs Supabase and Apple redirect settings review.";
+    }
+    if (lowerMessage.contains('id token')) {
+      return "Apple did not return a valid ID token. Try again or review Apple Sign In capability.";
+    }
+    return "Apple sign-in failed: $message";
   }
 
   Future<void> _loginWithOAuthRedirect({

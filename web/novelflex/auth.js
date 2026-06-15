@@ -29,12 +29,28 @@ const NovelFlexAuth = (() => {
   function redirectUrl() {
     const { origin, pathname } = window.location;
     if (origin === "null") return window.location.href.split("#")[0];
-    return `${origin}${pathname}`;
+    const cleanPath = pathname.endsWith("/index.html")
+      ? pathname.replace(/index\.html$/, "")
+      : pathname;
+    return `${origin}${cleanPath}`;
   }
 
   function normalizeError(error) {
     if (!error) return "";
     return error.message || "Authentication failed.";
+  }
+
+  function readRedirectError() {
+    const fragments = [window.location.search, window.location.hash]
+      .filter(Boolean)
+      .map((value) => value.replace(/^[?#]/, ""));
+
+    for (const fragment of fragments) {
+      const params = new URLSearchParams(fragment);
+      const description = params.get("error_description") || params.get("error");
+      if (description) return description.replace(/\+/g, " ");
+    }
+    return "";
   }
 
   function displayName() {
@@ -49,7 +65,9 @@ const NovelFlexAuth = (() => {
   }
 
   async function init() {
+    const redirectError = readRedirectError();
     const { data, error } = await client.auth.getSession();
+    if (redirectError) state.lastError = redirectError;
     if (error) state.lastError = normalizeError(error);
     state.session = data?.session || null;
     state.user = state.session?.user || null;
@@ -108,6 +126,7 @@ const NovelFlexAuth = (() => {
       provider,
       options: {
         redirectTo: redirectUrl(),
+        ...(provider === "apple" ? { scopes: "name email" } : {}),
       },
     });
     if (error) throw new Error(normalizeError(error));

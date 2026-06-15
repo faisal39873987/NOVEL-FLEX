@@ -1796,7 +1796,6 @@ function findAuthorChapter(bookId, chapterId) {
 
 function authorPermissionError() {
   if (!appState.auth.user) return "يجب تسجيل الدخول قبل تنفيذ هذا الإجراء.";
-  if (!hasWriterRole()) return "هذا الإجراء يتطلب دور writer أو admin في ملف المستخدم.";
   return "";
 }
 
@@ -2128,16 +2127,6 @@ async function saveAuthorNovel(form) {
   }
   if (!appState.authorPortal.loaded) {
     await loadAuthorPortal({ force: true });
-  }
-  if (!hasWriterAccess()) {
-    appState.authorPortal.error = "هذا الحساب لا يملك صلاحية كاتب أو مدير لحفظ الروايات.";
-    route();
-    return;
-  }
-  if (!hasWriterRole()) {
-    appState.authorPortal.error = "حفظ الروايات يتطلب دور writer أو admin في ملف المستخدم.";
-    route();
-    return;
   }
 
   const formData = new FormData(form);
@@ -3078,7 +3067,7 @@ function AuthorAccessGate() {
   if (!appState.auth.user) {
     return PageShell(
       "/author",
-      EmptyState("سجل الدخول للوصول إلى بوابة الكاتب", "بوابة الكاتب تحتاج حسابا مسجلا بدور كاتب.", "/auth/login"),
+      EmptyState("سجل الدخول للوصول إلى بوابة الكاتب", "يمكن لأي حساب مسجل إنشاء الروايات والمسودات.", "/auth/login"),
     );
   }
   if (!appState.authorPortal.loaded) {
@@ -3091,23 +3080,7 @@ function AuthorAccessGate() {
       EmptyState("تعذر تحميل بوابة الكاتب", appState.authorPortal.loadError, "/author"),
     );
   }
-  if (!hasWriterAccess()) {
-    return AuthorDashboardLayout(
-      "/author",
-      EmptyState("فعّل حساب الكاتب", "هذا الحساب لا يملك صلاحية إنشاء الروايات بعد.", "/auth/register"),
-    );
-  }
   return "";
-}
-
-function hasWriterAccess() {
-  const role = appState.authorPortal.profile?.role || "";
-  return ["writer", "admin"].includes(role);
-}
-
-function hasWriterRole() {
-  const role = appState.authorPortal.profile?.role || "";
-  return ["writer", "admin"].includes(role);
 }
 
 function AuthorTableNotice() {

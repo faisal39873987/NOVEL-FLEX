@@ -1,0 +1,171 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "NOVELFLEX Home" [ref=e4] [cursor=pointer]:
+        - /url: "#/"
+        - generic [ref=e5]: "N"
+        - generic [ref=e6]: NOVELFLEX
+      - navigation "التنقل الرئيسي" [ref=e7]:
+        - link "الرئيسية" [ref=e8] [cursor=pointer]:
+          - /url: "#/"
+        - link "تصفح" [ref=e9] [cursor=pointer]:
+          - /url: "#/browse"
+        - link "الأنواع" [ref=e10] [cursor=pointer]:
+          - /url: "#/genre/fantasy"
+        - link "بحث" [ref=e11] [cursor=pointer]:
+          - /url: "#/search"
+        - link "مكتبتي" [ref=e12] [cursor=pointer]:
+          - /url: "#/library"
+        - link "استوديو الكاتب" [ref=e13] [cursor=pointer]:
+          - /url: "#/author"
+        - link "الإدارة" [ref=e14] [cursor=pointer]:
+          - /url: "#/admin"
+      - generic [ref=e15]:
+        - generic [ref=e16]: بحث
+        - searchbox "بحث" [ref=e17]
+      - link "تسجيل الدخول" [ref=e18] [cursor=pointer]:
+        - /url: "#/auth/login"
+        - generic [ref=e19]: تسجيل الدخول
+  - main [active] [ref=e20]:
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23]: اختيارات هذا الأسبوع
+        - heading "مدينة الحبر الأخيرة" [level=1] [ref=e24]
+        - paragraph [ref=e25]: قارئة تكتشف أن رواية قديمة لا تنتهي، وكل فصل جديد يعيد تشكيل المدينة التي تعيش فيها.
+        - generic [ref=e26]:
+          - link "ابدأ القراءة" [ref=e27] [cursor=pointer]:
+            - /url: "#/novels/ink-city/chapters/c1"
+          - link "تفاصيل الرواية" [ref=e28] [cursor=pointer]:
+            - /url: "#/novels/ink-city"
+      - article [ref=e29]:
+        - generic "غلاف مدينة الحبر الأخيرة" [ref=e30]:
+          - generic [ref=e31]: مد
+        - generic [ref=e32]:
+          - generic "تقييم 4.8 من 5" [ref=e33]:
+            - generic [ref=e34]: ★
+            - generic [ref=e35]: "4.8"
+          - heading "ليان منصور" [level=2] [ref=e36]
+          - paragraph [ref=e37]: 86 فصل · 2.4M قراءة
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - heading "الأحدث انتشاراً" [level=2] [ref=e41]
+          - paragraph [ref=e42]: روايات محدثة ومرشحة للقراءة الآن
+        - link "عرض الكل" [ref=e43] [cursor=pointer]:
+          - /url: "#/browse"
+      - generic [ref=e44]:
+        - link "غلاف مدينة الحبر الأخيرة مدينة الحبر الأخيرة ليان منصور تقييم 4.8 من 5" [ref=e45] [cursor=pointer]:
+          - /url: "#/novels/ink-city"
+          - generic "غلاف مدينة الحبر الأخيرة" [ref=e46]:
+            - generic [ref=e47]: مد
+          - generic [ref=e48]: مدينة الحبر الأخيرة
+          - generic [ref=e49]: ليان منصور
+          - generic "تقييم 4.8 من 5" [ref=e50]:
+            - generic [ref=e51]: ★
+            - generic [ref=e52]: "4.8"
+        - link "غلاف بوابة الرمل بوابة الرمل ناصر الرومي تقييم 4.7 من 5" [ref=e53] [cursor=pointer]:
+          - /url: "#/novels/sand-gate"
+          - generic "غلاف بوابة الرمل" [ref=e54]:
+            - generic [ref=e55]: بو
+          - generic [ref=e56]: بوابة الرمل
+          - generic [ref=e57]: ناصر الرومي
+          - generic "تقييم 4.7 من 5" [ref=e58]:
+            - generic [ref=e59]: ★
+            - generic [ref=e60]: "4.7"
+        - link "غلاف وعد النيون وعد النيون سارة البحري تقييم 4.6 من 5" [ref=e61] [cursor=pointer]:
+          - /url: "#/novels/neon-vow"
+          - generic "غلاف وعد النيون" [ref=e62]:
+            - generic [ref=e63]: وع
+          - generic [ref=e64]: وعد النيون
+          - generic [ref=e65]: سارة البحري
+          - generic "تقييم 4.6 من 5" [ref=e66]:
+            - generic [ref=e67]: ★
+            - generic [ref=e68]: "4.6"
+        - link "غلاف رسائل الزجاج رسائل الزجاج ميرا يونس تقييم 4.5 من 5" [ref=e69] [cursor=pointer]:
+          - /url: "#/novels/glass-letters"
+          - generic "غلاف رسائل الزجاج" [ref=e70]:
+            - generic [ref=e71]: رس
+          - generic [ref=e72]: رسائل الزجاج
+          - generic [ref=e73]: ميرا يونس
+          - generic "تقييم 4.5 من 5" [ref=e74]:
+            - generic [ref=e75]: ★
+            - generic [ref=e76]: "4.5"
+        - link "غلاف مدار تسعة مدار تسعة آدم سليم تقييم 4.4 من 5" [ref=e77] [cursor=pointer]:
+          - /url: "#/novels/orbit-nine"
+          - generic "غلاف مدار تسعة" [ref=e78]:
+            - generic [ref=e79]: مد
+          - generic [ref=e80]: مدار تسعة
+          - generic [ref=e81]: آدم سليم
+          - generic "تقييم 4.4 من 5" [ref=e82]:
+            - generic [ref=e83]: ★
+            - generic [ref=e84]: "4.4"
+    - generic [ref=e85]:
+      - generic [ref=e86]:
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - heading "قوائم النوع" [level=2] [ref=e89]
+            - paragraph [ref=e90]: اختصر الطريق حسب مزاج القراءة
+          - link "عرض الكل" [ref=e91] [cursor=pointer]:
+            - /url: "#/genre/fantasy"
+        - generic [ref=e92]:
+          - link "خيال 1" [ref=e93] [cursor=pointer]:
+            - /url: "#/genre/fantasy"
+            - text: خيال
+            - generic [ref=e94]: "1"
+          - link "رومانسي 1" [ref=e95] [cursor=pointer]:
+            - /url: "#/genre/romance"
+            - text: رومانسي
+            - generic [ref=e96]: "1"
+          - link "حضري 1" [ref=e97] [cursor=pointer]:
+            - /url: "#/genre/urban"
+            - text: حضري
+            - generic [ref=e98]: "1"
+          - link "غموض 1" [ref=e99] [cursor=pointer]:
+            - /url: "#/genre/mystery"
+            - text: غموض
+            - generic [ref=e100]: "1"
+          - link "خيال علمي 1" [ref=e101] [cursor=pointer]:
+            - /url: "#/genre/sci-fi"
+            - text: خيال علمي
+            - generic [ref=e102]: "1"
+          - link "تاريخي 1" [ref=e103] [cursor=pointer]:
+            - /url: "#/genre/historical"
+            - text: تاريخي
+            - generic [ref=e104]: "1"
+          - link "كوميديا 3" [ref=e105] [cursor=pointer]:
+            - /url: "#/genre/comedy"
+            - text: كوميديا
+            - generic [ref=e106]: "3"
+          - link "دراما 3" [ref=e107] [cursor=pointer]:
+            - /url: "#/genre/drama"
+            - text: دراما
+            - generic [ref=e108]: "3"
+      - generic [ref=e109]:
+        - generic [ref=e110]:
+          - generic [ref=e111]:
+            - heading "أكمل القراءة" [level=2] [ref=e112]
+            - paragraph [ref=e113]: آخر نشاط من مكتبتك
+          - link "عرض الكل" [ref=e114] [cursor=pointer]:
+            - /url: "#/history"
+        - generic [ref=e115]:
+          - link "غلاف مدينة الحبر الأخيرة مدينة الحبر الأخيرة الفصل 3 · 62%" [ref=e116] [cursor=pointer]:
+            - /url: "#/novels/ink-city/chapters/c1"
+            - generic "غلاف مدينة الحبر الأخيرة" [ref=e117]:
+              - generic [ref=e118]: مد
+            - generic [ref=e119]:
+              - generic [ref=e120]: مدينة الحبر الأخيرة
+              - generic [ref=e121]: الفصل 3 · 62%
+          - link "غلاف المحكمة الصامتة المحكمة الصامتة الفصل 18 · 44%" [ref=e122] [cursor=pointer]:
+            - /url: "#/novels/silent-court/chapters/c1"
+            - generic "غلاف المحكمة الصامتة" [ref=e123]:
+              - generic [ref=e124]: ال
+            - generic [ref=e125]:
+              - generic [ref=e126]: المحكمة الصامتة
+              - generic [ref=e127]: الفصل 18 · 44%
+          - link "غلاف رسائل الزجاج رسائل الزجاج الفصل 7 · 81%" [ref=e128] [cursor=pointer]:
+            - /url: "#/novels/glass-letters/chapters/c1"
+            - generic "غلاف رسائل الزجاج" [ref=e129]:
+              - generic [ref=e130]: رس
+            - generic [ref=e131]:
+              - generic [ref=e132]: رسائل الزجاج
+              - generic [ref=e133]: الفصل 7 · 81%

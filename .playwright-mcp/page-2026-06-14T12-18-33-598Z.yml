@@ -1,0 +1,52 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - link "NOVELFLEX" [ref=e4] [cursor=pointer]:
+      - /url: "#/"
+      - generic [ref=e5]: "N"
+      - generic [ref=e6]: NOVELFLEX
+    - navigation "التنقل الرئيسي" [ref=e7]:
+      - link "Browse / تصفح" [ref=e8] [cursor=pointer]:
+        - /url: "#/browse"
+      - link "Search / بحث" [ref=e9] [cursor=pointer]:
+        - /url: "#/search"
+      - link "Library / مكتبتي" [ref=e10] [cursor=pointer]:
+        - /url: "#/library"
+      - link "Create / إنشاء" [ref=e11] [cursor=pointer]:
+        - /url: "#/author"
+      - link "Admin / الإدارة" [ref=e12] [cursor=pointer]:
+        - /url: "#/admin"
+    - generic [ref=e13]:
+      - searchbox "ابحث عن رواية أو كاتب" [ref=e14]
+      - button "بحث" [ref=e15] [cursor=pointer]: ⌕
+    - group [ref=e16]:
+      - generic "ح حسابي" [ref=e17]:
+        - generic [ref=e18]: ح
+        - generic [ref=e19]: حسابي
+  - main [ref=e20]
+  - contentinfo [ref=e25]:
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - link "N NOVELFLEX" [ref=e28] [cursor=pointer]:
+          - /url: "#/"
+          - generic [ref=e29]: "N"
+          - generic [ref=e30]: NOVELFLEX
+        - paragraph [ref=e31]: © 2026 NOVELFLEX. Arabic webnovel platform / منصة روايات عربية.
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - generic [ref=e34]: Teams / الفريق
+          - link "Be an Author / كن كاتبا" [ref=e35] [cursor=pointer]:
+            - /url: "#/author"
+          - link "Academy / الأكاديمية" [ref=e36] [cursor=pointer]:
+            - /url: "#/author/academy"
+        - generic [ref=e37]:
+          - generic [ref=e38]: Contacts / التواصل
+          - link "Reports / البلاغات" [ref=e39] [cursor=pointer]:
+            - /url: "#/admin/reports"
+          - link "Account / الحساب" [ref=e40] [cursor=pointer]:
+            - /url: "#/profile"
+        - generic [ref=e41]:
+          - generic [ref=e42]: Resources / الموارد
+          - link "Browse / تصفح" [ref=e43] [cursor=pointer]:
+            - /url: "#/browse"
+          - link "Library / المكتبة" [ref=e44] [cursor=pointer]:
+            - /url: "#/library"

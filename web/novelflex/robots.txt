@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Disallow: /?route=%2Fadmin
+Disallow: /?route=%2Fauth
+Disallow: /?route=%2Fprofile
+Disallow: /?route=%2Flibrary
+Disallow: /?route=%2Fhistory
+
+Sitemap: https://www.novelflex.com/sitemap.xml

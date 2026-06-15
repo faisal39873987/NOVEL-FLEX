@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NOVELFLEX | روايات عربية وقراءة تفاعلية</title>
+    <meta
+      name="description"
+      content="NOVELFLEX منصة عربية لاكتشاف الروايات، قراءة الفصول، حفظ المكتبة، متابعة الكتّاب، وكتابة المراجعات."
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#137c7a" />
+    <link rel="canonical" href="https://www.novelflex.com/" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+    <meta property="og:site_name" content="NOVELFLEX" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ar_AR" />
+    <meta property="og:title" content="NOVELFLEX | روايات عربية وقراءة تفاعلية" />
+    <meta
+      property="og:description"
+      content="اكتشف روايات عربية، اقرأ الفصول، احفظ مكتبتك، وتابع الكتّاب على NOVELFLEX."
+    />
+    <meta property="og:url" content="https://www.novelflex.com/" />
+    <meta property="og:image" content="https://www.novelflex.com/assets/home_screen.jpg" />
+    <meta property="og:image:alt" content="NOVELFLEX Arabic reading platform" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="NOVELFLEX | روايات عربية وقراءة تفاعلية" />
+    <meta
+      name="twitter:description"
+      content="منصة عربية لاكتشاف الروايات وقراءة الفصول ومتابعة الكتّاب."
+    />
+    <meta name="twitter:image" content="https://www.novelflex.com/assets/home_screen.jpg" />
+
+    <script type="application/ld+json" data-seo-jsonld>
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "NOVELFLEX",
+        "url": "https://www.novelflex.com/",
+        "inLanguage": "ar",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://www.novelflex.com/?route=/search&q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+    <link rel="preload" as="image" href="./assets/home_screen.jpg" fetchpriority="high" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-inner">
+        <a class="brand" href="#/" aria-label="NOVELFLEX Home">
+          <span class="brand-mark">N</span>
+          <span class="brand-name">NOVELFLEX</span>
+        </a>
+
+        <nav class="desktop-nav" aria-label="التنقل الرئيسي">
+          <a href="#/">الرئيسية</a>
+          <a href="#/browse">تصفح</a>
+          <a href="#/genre/fantasy">الأنواع</a>
+          <a href="#/search">بحث</a>
+          <a href="#/library">مكتبتي</a>
+          <a href="#/author">استوديو الكاتب</a>
+          <a href="#/admin">الإدارة</a>
+        </nav>
+
+        <form class="header-search" data-search-form>
+          <label class="sr-only" for="global-search">بحث</label>
+          <input id="global-search" name="q" type="search" placeholder="ابحث عن رواية أو كاتب" />
+        </form>
+
+        <a class="account-pill" href="#/auth/login" data-account-pill>
+          <img src="./assets/profile_pic.png" alt="" />
+          <span data-account-label>تسجيل الدخول</span>
+        </a>
+      </div>
+    </header>
+
+    <main id="app" class="app-main" tabindex="-1"></main>
+
+    <nav class="mobile-nav" aria-label="تنقل الهاتف">
+      <a href="#/" data-mobile-route="/">الرئيسية</a>
+      <a href="#/browse" data-mobile-route="/browse">تصفح</a>
+      <a href="#/search" data-mobile-route="/search">بحث</a>
+      <a href="#/library" data-mobile-route="/library">مكتبتي</a>
+      <a href="#/author" data-mobile-route="/author">الكاتب</a>
+      <a href="#/admin" data-mobile-route="/admin">الإدارة</a>
+    </nav>
+
+    <script src="./vendor/supabase.js" defer></script>
+    <script src="./auth.js" defer></script>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

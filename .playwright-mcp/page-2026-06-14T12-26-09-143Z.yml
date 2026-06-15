@@ -1,0 +1,85 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - link "NOVELFLEX" [ref=e4] [cursor=pointer]:
+      - /url: "#/"
+      - generic [ref=e5]: "N"
+      - generic [ref=e6]: NOVELFLEX
+    - navigation "التنقل الرئيسي" [ref=e7]:
+      - link "Browse / تصفح" [ref=e8] [cursor=pointer]:
+        - /url: "#/browse"
+      - link "Search / بحث" [ref=e9] [cursor=pointer]:
+        - /url: "#/search"
+      - link "Library / مكتبتي" [ref=e10] [cursor=pointer]:
+        - /url: "#/library"
+      - link "Create / إنشاء" [ref=e11] [cursor=pointer]:
+        - /url: "#/author"
+      - link "Admin / الإدارة" [ref=e12] [cursor=pointer]:
+        - /url: "#/admin"
+    - generic [ref=e13]:
+      - searchbox "ابحث عن رواية أو كاتب" [ref=e14]
+      - button "بحث" [ref=e15] [cursor=pointer]: ⌕
+    - group [ref=e16]:
+      - generic "ح حسابي" [ref=e17]:
+        - generic [ref=e18]: ح
+        - generic [ref=e19]: حسابي
+  - main [ref=e20]:
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23]: Authentication / المصادقة
+        - heading "تسجيل الدخول" [level=1] [ref=e24]
+        - paragraph [ref=e25]: ادخل إلى مكتبتك وسجل القراءة وتفضيلاتك.
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]: البريد الإلكتروني
+          - textbox "البريد الإلكتروني" [ref=e29]:
+            - /placeholder: reader@example.com
+        - generic [ref=e30]:
+          - generic [ref=e31]: كلمة المرور
+          - textbox "كلمة المرور" [ref=e32]
+        - button "دخول بالبريد" [ref=e33] [cursor=pointer]
+        - generic [ref=e34]:
+          - button "Apple / تسجيل الدخول" [ref=e35] [cursor=pointer]
+          - button "Google / تسجيل الدخول" [ref=e36] [cursor=pointer]
+        - button "المتابعة كضيف" [ref=e37] [cursor=pointer]
+        - paragraph [ref=e38]:
+          - text: ليس لديك حساب؟
+          - link "إنشاء حساب" [ref=e39] [cursor=pointer]:
+            - /url: "#/auth/register"
+  - contentinfo [ref=e40]:
+    - generic [ref=e41]:
+      - generic [ref=e42]:
+        - link "N NOVELFLEX" [ref=e43] [cursor=pointer]:
+          - /url: "#/"
+          - generic [ref=e44]: "N"
+          - generic [ref=e45]: NOVELFLEX
+        - paragraph [ref=e46]: © 2026 NOVELFLEX. Arabic webnovel platform / منصة روايات عربية.
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e49]: Teams / الفريق
+          - link "Be an Author / كن كاتبا" [ref=e50] [cursor=pointer]:
+            - /url: "#/author"
+          - link "Academy / الأكاديمية" [ref=e51] [cursor=pointer]:
+            - /url: "#/author/academy"
+        - generic [ref=e52]:
+          - generic [ref=e53]: Contacts / التواصل
+          - link "Reports / البلاغات" [ref=e54] [cursor=pointer]:
+            - /url: "#/admin/reports"
+          - link "Account / الحساب" [ref=e55] [cursor=pointer]:
+            - /url: "#/profile"
+        - generic [ref=e56]:
+          - generic [ref=e57]: Resources / الموارد
+          - link "Browse / تصفح" [ref=e58] [cursor=pointer]:
+            - /url: "#/browse"
+          - link "Library / المكتبة" [ref=e59] [cursor=pointer]:
+            - /url: "#/library"
+  - complementary "NOVELFLEX app links" [ref=e60]:
+    - button "إغلاق" [ref=e61] [cursor=pointer]: ×
+    - generic [ref=e62]: "N"
+    - text: Download NOVELFLEX App / حمّل تطبيق NOVELFLEX
+    - generic [ref=e63]:
+      - link "Via Email / عبر البريد" [ref=e64] [cursor=pointer]:
+        - /url: "#/auth/login"
+      - link "App Store / آب ستور" [ref=e65] [cursor=pointer]:
+        - /url: "#/library"
+      - link "Google Play / جوجل بلاي" [ref=e66] [cursor=pointer]:
+        - /url: "#/browse"

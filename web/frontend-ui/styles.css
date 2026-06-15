@@ -207,6 +207,13 @@ button {
   background: #eef1ff;
   color: var(--brand);
   font-weight: 600;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatar-large {
@@ -1105,8 +1112,41 @@ button:disabled {
   display: grid;
   grid-template-columns: 110px minmax(0, 1fr);
   gap: 28px;
-  max-width: 840px;
+  max-width: 980px;
   margin: 30px auto;
+}
+
+.profile-avatar-stack {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 12px;
+}
+
+.profile-avatar {
+  overflow: hidden;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-button {
+  position: relative;
+  width: 100%;
+  min-height: 38px;
+  justify-content: center;
+  overflow: hidden;
+  text-align: center;
+}
+
+.profile-avatar-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .metric-grid {
@@ -1132,6 +1172,43 @@ button:disabled {
   display: block;
   margin-top: 4px;
   font-size: 30px;
+}
+
+.profile-author-books {
+  margin-top: 28px;
+}
+
+.profile-book-list {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-book-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 14px;
+}
+
+.profile-book-row h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.profile-book-row p {
+  margin: 0;
+}
+
+.profile-book-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .search-page-form,
@@ -1503,9 +1580,32 @@ button:disabled {
   .book-card,
   .book-list-item,
   .library-card,
-  .admin-row,
-  .profile-page {
+  .admin-row {
     grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  .profile-page {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-avatar-stack {
+    justify-items: start;
+  }
+
+  .profile-avatar-button {
+    width: auto;
+  }
+
+  .profile-book-row {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-book-actions {
+    justify-content: stretch;
+  }
+
+  .profile-book-actions .btn {
+    flex: 1 1 120px;
   }
 
   .book-card .book-cover,

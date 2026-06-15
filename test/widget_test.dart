@@ -62,6 +62,19 @@ void main() {
       );
     });
 
+    test('web profile exposes author metrics and avatar upload', () {
+      final webApp = File('web/frontend-ui/app.js').readAsStringSync();
+
+      expect(webApp, contains('authorBookCount'));
+      expect(webApp, contains('authorChapterCount'));
+      expect(webApp, contains('data-profile-avatar-input'));
+      expect(webApp, contains('uploadProfileAvatar'));
+      expect(webApp, contains('author-images'));
+      expect(webApp, contains('avatar_url: publicUrl'));
+      expect(webApp, contains('رواياتي'));
+      expect(webApp, contains('فصولي'));
+    });
+
     test('mobile Supabase repository guards write ownership', () {
       final repository =
           File('lib/data/repositories/book_repository.dart').readAsStringSync();

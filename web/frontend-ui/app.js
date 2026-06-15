@@ -169,10 +169,19 @@ const appState = {
     loaded: false,
     loading: false,
     error: "",
+    avatarMessage: "",
+    avatarError: "",
+    savingAvatar: false,
+    profile: null,
     libraryCount: 0,
     readingCount: 0,
     reviewCount: 0,
     followCount: 0,
+    authorBookCount: 0,
+    authorChapterCount: 0,
+    publishedBookCount: 0,
+    draftBookCount: 0,
+    authorBooks: [],
   },
   social: {
     loadedBooks: new Set(),
@@ -353,10 +362,19 @@ function resetProfileMetrics() {
     loaded: false,
     loading: false,
     error: "",
+    avatarMessage: "",
+    avatarError: "",
+    savingAvatar: false,
+    profile: null,
     libraryCount: 0,
     readingCount: 0,
     reviewCount: 0,
     followCount: 0,
+    authorBookCount: 0,
+    authorChapterCount: 0,
+    publishedBookCount: 0,
+    draftBookCount: 0,
+    authorBooks: [],
   };
 }
 
@@ -1011,21 +1029,79 @@ async function loadProfileMetrics({ force = false } = {}) {
   route();
 
   try {
-    const [libraryCount, readingCount, reviewCount, followCount] =
+    const [profileResult, booksResult, libraryCount, readingCount, reviewCount, followCount] =
       await Promise.all([
+        client
+          .from("profiles")
+          .select("id,role,display_name,username,avatar_url,bio,is_public")
+          .eq("id", user.id)
+          .limit(1),
+        client
+          .from("books")
+          .select(
+            [
+              "id",
+              "author_id",
+              "category_id",
+              "title_ar",
+              "title_en",
+              "description_ar",
+              "description_en",
+              "cover_url",
+              "status",
+              "language",
+              "views_count",
+              "likes_count",
+              "rating_average",
+              "ratings_count",
+              "chapters_count",
+              "published_at",
+              "created_at",
+              "updated_at",
+              "category:categories!books_category_id_fkey(id,slug,name_ar,name_en)",
+            ].join(","),
+          )
+          .eq("author_id", user.id)
+          .order("updated_at", { ascending: false })
+          .order("created_at", { ascending: false }),
         countUserRows(client, "favorites", "user_id", user.id),
         countUserRows(client, "reading_progress", "user_id", user.id),
         countUserRows(client, "ratings", "user_id", user.id),
         countUserRows(client, "follows", "follower_id", user.id),
       ]);
+    if (profileResult.error) throw profileResult.error;
+    if (booksResult.error) throw booksResult.error;
+
+    const authorBooks = (booksResult.data || []).map(normalizeAuthorNovel);
+    const authorBookIds = authorBooks.map((book) => book.id).filter(Boolean);
+    let authorChapterCount = 0;
+    if (authorBookIds.length) {
+      const chaptersResult = await client
+        .from("chapters")
+        .select("id", { count: "exact", head: true })
+        .in("book_id", authorBookIds);
+      if (chaptersResult.error) throw chaptersResult.error;
+      authorChapterCount = Number(chaptersResult.count || 0);
+    }
+
     appState.profileMetrics = {
+      ...appState.profileMetrics,
       loaded: true,
       loading: false,
       error: "",
+      profile: normalizeProfile(profileResult.data?.[0] || {
+        id: user.id,
+        display_name: user.email?.split("@")[0],
+      }),
       libraryCount,
       readingCount,
       reviewCount,
       followCount,
+      authorBookCount: authorBooks.length,
+      authorChapterCount,
+      publishedBookCount: authorBooks.filter((book) => book.rawStatus === "published").length,
+      draftBookCount: authorBooks.filter((book) => book.rawStatus !== "published").length,
+      authorBooks,
     };
   } catch (error) {
     appState.profileMetrics = {
@@ -1657,7 +1733,7 @@ function validateAuthorCoverFile(file) {
   }
 }
 
-function loadImageFromFile(file) {
+function loadImageFromFile(file, errorMessage = "تعذر قراءة صورة الغلاف. جرّب ملف صورة آخر.") {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const image = new Image();
@@ -1667,7 +1743,7 @@ function loadImageFromFile(file) {
     };
     image.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("تعذر قراءة صورة الغلاف. جرّب ملف صورة آخر."));
+      reject(new Error(errorMessage));
     };
     image.src = url;
   });
@@ -1768,6 +1844,123 @@ async function uploadNovelCover(client, userId, file) {
   const { data } = client.storage.from("book-covers").getPublicUrl(path);
   setAuthorCoverUploadStatus("تم رفع الغلاف بنجاح.", 100, false);
   return data?.publicUrl || "";
+}
+
+const PROFILE_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+const PROFILE_AVATAR_TARGET_SIZES = [512, 384, 256];
+const PROFILE_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function validateProfileAvatarFile(file) {
+  if (!file || !file.size) return;
+  const extension = (file.name || "").split(".").pop()?.toLowerCase() || "";
+  const allowedExtension = ["jpg", "jpeg", "png", "webp"].includes(extension);
+  if (!PROFILE_AVATAR_TYPES.has(file.type) && !allowedExtension) {
+    throw new Error("صيغة الصورة غير مدعومة. اختر JPG أو PNG أو WebP.");
+  }
+}
+
+async function optimizeProfileAvatarImage(file) {
+  validateProfileAvatarFile(file);
+  const image = await loadImageFromFile(file, "تعذر قراءة صورة البروفايل. جرّب صورة أخرى.");
+  const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+  const sourceX = (image.naturalWidth - sourceSize) / 2;
+  const sourceY = (image.naturalHeight - sourceSize) / 2;
+  const qualities = [0.85, 0.75, 0.65];
+  let bestBlob = null;
+
+  for (const targetSize of PROFILE_AVATAR_TARGET_SIZES) {
+    const size = Math.max(1, Math.min(targetSize, Math.round(sourceSize)));
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) throw new Error("تعذر تجهيز صورة البروفايل في هذا المتصفح.");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, size, size);
+    context.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
+
+    for (const quality of qualities) {
+      const blob = await canvasToJpegBlob(canvas, quality);
+      bestBlob = blob;
+      if (blob.size <= PROFILE_AVATAR_MAX_BYTES) {
+        return new File([blob], `${Date.now()}_avatar.jpg`, {
+          type: "image/jpeg",
+          lastModified: Date.now(),
+        });
+      }
+    }
+  }
+
+  if (bestBlob && bestBlob.size <= PROFILE_AVATAR_MAX_BYTES) {
+    return new File([bestBlob], `${Date.now()}_avatar.jpg`, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  }
+  throw new Error("تعذر تصغير صورة البروفايل تلقائيا. جرّب صورة أوضح بحجم أصغر.");
+}
+
+function userFacingProfileError(error) {
+  const message = error?.message || "";
+  if (/bucket|storage/i.test(message)) return "تعذر رفع صورة البروفايل الآن. تحقق من التخزين ثم حاول مرة أخرى.";
+  if (/permission|policy|row-level|rls|unauthorized|jwt/i.test(message)) return "لا تملك الصلاحية الكافية لتحديث صورة الحساب.";
+  if (/network|fetch|failed to fetch/i.test(message)) return "تعذر الاتصال بالخادم. تحقق من الشبكة ثم حاول مرة أخرى.";
+  return message || "تعذر تحديث صورة البروفايل.";
+}
+
+async function uploadProfileAvatar(file) {
+  const user = appState.auth.user;
+  const client = supabaseClient();
+  if (!user || !client) {
+    appState.profileMetrics.avatarError = "سجل الدخول قبل تغيير صورة البروفايل.";
+    route();
+    return;
+  }
+
+  appState.profileMetrics.savingAvatar = true;
+  appState.profileMetrics.avatarMessage = "جار تجهيز الصورة...";
+  appState.profileMetrics.avatarError = "";
+  route();
+
+  try {
+    const optimizedFile = await optimizeProfileAvatarImage(file);
+    appState.profileMetrics.avatarMessage = "جار رفع الصورة...";
+    route();
+
+    const path = `${user.id}/profiles/${Date.now()}_avatar.jpg`;
+    const { error: uploadError } = await client.storage.from("author-images").upload(path, optimizedFile, {
+      cacheControl: "3600",
+      contentType: "image/jpeg",
+      upsert: false,
+    });
+    if (uploadError) throw uploadError;
+
+    const { data } = client.storage.from("author-images").getPublicUrl(path);
+    const publicUrl = data?.publicUrl || "";
+    if (!publicUrl) throw new Error("تعذر إنشاء رابط صورة البروفايل.");
+
+    const { data: profileData, error: updateError } = await client
+      .from("profiles")
+      .update({
+        avatar_url: publicUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id)
+      .select("id,role,display_name,username,avatar_url,bio,is_public")
+      .single();
+    if (updateError) throw updateError;
+
+    appState.profileMetrics.profile = normalizeProfile(profileData || {});
+    appState.profileMetrics.avatarMessage = "تم تحديث صورة البروفايل.";
+    appState.profileMetrics.loaded = false;
+    await loadProfileMetrics({ force: true });
+  } catch (error) {
+    appState.profileMetrics.avatarError = userFacingProfileError(error);
+    appState.profileMetrics.avatarMessage = "";
+  } finally {
+    appState.profileMetrics.savingAvatar = false;
+    route();
+  }
 }
 
 async function uploadChapterCover(client, userId, bookId, chapterNumber, file) {
@@ -2273,6 +2466,14 @@ function MobileNav(active = "") {
   `;
 }
 
+function CurrentUserAvatarSmall(name) {
+  const avatarUrl = appState.profileMetrics.profile?.avatarUrl || appState.authorPortal.profile?.avatarUrl || "";
+  if (avatarUrl) {
+    return `<span class="avatar"><img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(name)}" /></span>`;
+  }
+  return `<span class="avatar">${escapeHtml(getAvatarLetter())}</span>`;
+}
+
 function UserMenu() {
   const isSignedIn = Boolean(appState.auth.user);
   const isGuest = appState.auth.isGuest;
@@ -2281,7 +2482,7 @@ function UserMenu() {
   const unread = unreadNotificationCount();
   return `
     <details class="user-menu">
-      <summary><span class="avatar">${escapeHtml(getAvatarLetter())}</span><span>${escapeHtml(name)}</span>${unread ? `<b class="notification-badge">${unread}</b>` : ""}</summary>
+      <summary>${CurrentUserAvatarSmall(name)}<span>${escapeHtml(name)}</span>${unread ? `<b class="notification-badge">${unread}</b>` : ""}</summary>
       <div class="user-menu-panel">
         <span class="menu-status">${authStatusLabel()}</span>
         ${
@@ -2930,6 +3131,30 @@ function renderHistory() {
   );
 }
 
+function ProfileAvatar(profile, name) {
+  const avatarUrl = profile?.avatarUrl || "";
+  if (avatarUrl) {
+    return `<span class="avatar avatar-large profile-avatar"><img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(name)}" /></span>`;
+  }
+  return `<span class="avatar avatar-large profile-avatar">${escapeHtml(getAvatarLetter())}</span>`;
+}
+
+function ProfileAuthorBookRow(book) {
+  const updated = book.updated ? new Date(book.updated).toLocaleDateString("ar") : "بدون تاريخ";
+  return `
+    <article class="profile-book-row">
+      <div>
+        <h3>${escapeHtml(book.title)}</h3>
+        <p>${escapeHtml(book.approval)} · ${book.chapters || 0} فصل · آخر تحديث ${escapeHtml(updated)}</p>
+      </div>
+      <div class="profile-book-actions">
+        <a class="btn secondary" href="#/author/novels/${book.id}/chapters">الفصول</a>
+        <a class="btn primary" href="#/author/novels/${book.id}/edit">تعديل</a>
+      </div>
+    </article>
+  `;
+}
+
 function renderProfile() {
   const isSignedIn = Boolean(appState.auth.user);
   const isGuest = appState.auth.isGuest;
@@ -2942,10 +3167,18 @@ function renderProfile() {
     readingCount: 0,
     reviewCount: 0,
     followCount: 0,
+    authorBookCount: 0,
+    authorChapterCount: 0,
+    publishedBookCount: 0,
+    draftBookCount: 0,
+    authorBooks: [],
     loading: false,
     error: "",
   };
   const metricValue = (value) => metrics.loading ? "..." : String(value || 0);
+  const profile = metrics.profile || null;
+  const profileName = profile?.name && profile.name !== "كاتب NOVELFLEX" ? profile.name : name;
+  const authorBooks = metrics.authorBooks || [];
   const description = isSignedIn
     ? `تم تسجيل الدخول${email ? ` باستخدام ${email}` : ""}.`
     : isGuest
@@ -2955,23 +3188,60 @@ function renderProfile() {
     "/profile",
     `
       <section class="profile-page">
-        <span class="avatar avatar-large">${escapeHtml(getAvatarLetter())}</span>
+        <div class="profile-avatar-stack">
+          ${ProfileAvatar(profile, profileName)}
+          ${
+            isSignedIn
+              ? `<label class="btn secondary profile-avatar-button">
+                  ${metrics.savingAvatar ? "جار الرفع..." : "تغيير الصورة"}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" data-profile-avatar-input ${metrics.savingAvatar ? "disabled" : ""} />
+                </label>`
+              : ""
+          }
+        </div>
         <div>
-          <span class="eyebrow">${dual("ملف القارئ", "Reader Profile")} · ${authStatusLabel()}</span>
-          <h1>${escapeHtml(name)}</h1>
+          <span class="eyebrow">${dual("ملف الحساب", "Account Profile")} · ${authStatusLabel()}</span>
+          <h1>${escapeHtml(profileName)}</h1>
           <p>${escapeHtml(description)}</p>
           ${
             transientMessage
               ? `<p class="auth-alert success">${escapeHtml(transientMessage)}</p>`
               : ""
           }
+          ${metrics.avatarMessage ? `<p class="auth-alert success">${escapeHtml(metrics.avatarMessage)}</p>` : ""}
+          ${metrics.avatarError ? `<p class="auth-alert error">${escapeHtml(metrics.avatarError)}</p>` : ""}
           <div class="metric-grid">
             <article><span>محفوظة</span><b>${metricValue(metrics.libraryCount)}</b></article>
             <article><span>قراءة</span><b>${metricValue(metrics.readingCount)}</b></article>
             <article><span>مراجعات</span><b>${metricValue(metrics.reviewCount)}</b></article>
             <article><span>متابعات</span><b>${metricValue(metrics.followCount)}</b></article>
+            <article><span>رواياتي</span><b>${metricValue(metrics.authorBookCount)}</b></article>
+            <article><span>فصولي</span><b>${metricValue(metrics.authorChapterCount)}</b></article>
+            <article><span>منشورة</span><b>${metricValue(metrics.publishedBookCount)}</b></article>
+            <article><span>مسودات</span><b>${metricValue(metrics.draftBookCount)}</b></article>
           </div>
           ${metrics.error ? `<p class="auth-alert error">${escapeHtml(metrics.error)}</p>` : ""}
+          ${
+            isSignedIn
+              ? `<section class="profile-author-books">
+                  <div class="section-heading">
+                    <div>
+                      <span class="eyebrow">استوديو الكاتب</span>
+                      <h2>آخر رواياتي</h2>
+                      <p>الروايات المرتبطة بحسابك في جدول books.</p>
+                    </div>
+                    <a class="btn secondary" href="#/author/novels">إدارة الروايات</a>
+                  </div>
+                  ${
+                    metrics.loading
+                      ? LoadingState()
+                      : authorBooks.length
+                        ? `<div class="profile-book-list">${authorBooks.slice(0, 4).map(ProfileAuthorBookRow).join("")}</div>`
+                        : EmptyState("لا توجد روايات بعد", "ابدأ أول رواية من استوديو الكاتب.", "/author/novels/new")
+                  }
+                </section>`
+              : ""
+          }
           ${
             isSignedIn || isGuest
               ? `<div class="form-actions"><button class="btn secondary" type="button" data-logout>تسجيل الخروج</button></div>`
@@ -3806,6 +4076,15 @@ function bindInteractions() {
       }
       const status = input.closest("label")?.querySelector("[data-author-cover-upload-status]");
       if (status) status.innerHTML = AuthorCoverUploadNotice();
+    });
+  });
+
+  document.querySelectorAll("[data-profile-avatar-input]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      uploadProfileAvatar(file);
+      input.value = "";
     });
   });
 

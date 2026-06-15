@@ -1606,7 +1606,7 @@ function jpegFileName(file) {
   return `${base || "cover"}.jpg`;
 }
 
-const AUTHOR_COVER_MAX_BYTES = 2 * 1024 * 1024;
+const AUTHOR_COVER_MAX_BYTES = 5 * 1024 * 1024;
 const AUTHOR_COVER_MAX_WIDTH = 1600;
 const AUTHOR_COVER_JPEG_QUALITY = 0.85;
 const AUTHOR_COVER_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -1689,7 +1689,7 @@ async function optimizeAuthorCoverImage(file) {
   validateAuthorCoverFile(file);
   const originalSize = file.size;
   setAuthorCoverUploadStatus(
-    `حجم الغلاف الحالي ${formatFileSize(originalSize)}. الحد الأقصى ${formatFileSize(AUTHOR_COVER_MAX_BYTES)}.`,
+    `حجم الغلاف الحالي ${formatFileSize(originalSize)}. سنضغطه تلقائيا قبل الرفع.`,
     10,
     true,
   );
@@ -1705,7 +1705,8 @@ async function optimizeAuthorCoverImage(file) {
   setAuthorCoverUploadStatus("جار ضغط وتحسين الغلاف قبل الرفع...", 35, true);
   route();
 
-  const widths = [AUTHOR_COVER_MAX_WIDTH, 1400, 1200];
+  const widths = [AUTHOR_COVER_MAX_WIDTH, 1400, 1200, 1000, 800];
+  const qualities = [AUTHOR_COVER_JPEG_QUALITY, 0.75, 0.65];
   let bestBlob = null;
 
   for (const maxWidth of widths) {
@@ -1721,18 +1722,20 @@ async function optimizeAuthorCoverImage(file) {
     context.fillRect(0, 0, width, height);
     context.drawImage(image, 0, 0, width, height);
 
-    const blob = await canvasToJpegBlob(canvas);
-    bestBlob = blob;
-    if (blob.size <= AUTHOR_COVER_MAX_BYTES) {
-      return new File([blob], jpegFileName(file), {
-        type: "image/jpeg",
-        lastModified: Date.now(),
-      });
+    for (const quality of qualities) {
+      const blob = await canvasToJpegBlob(canvas, quality);
+      bestBlob = blob;
+      if (blob.size <= AUTHOR_COVER_MAX_BYTES) {
+        return new File([blob], jpegFileName(file), {
+          type: "image/jpeg",
+          lastModified: Date.now(),
+        });
+      }
     }
   }
 
   throw new Error(
-    `حجم الغلاف بعد الضغط ${formatFileSize(bestBlob?.size || originalSize)}. الحد الأقصى ${formatFileSize(AUTHOR_COVER_MAX_BYTES)}.`,
+    `تعذر تجهيز الغلاف الآن. يمكنك حفظ الرواية بدون غلاف وإضافته لاحقا.`,
   );
 }
 
@@ -2112,7 +2115,7 @@ async function loadAuthorPortal({ force = false } = {}) {
   }
 }
 
-async function saveAuthorNovel(form) {
+async function saveAuthorNovel(form, requestedStatusAction = "") {
   const user = appState.auth.user;
   if (!user) {
     appState.authorPortal.error = "يجب تسجيل الدخول ككاتب قبل الحفظ.";
@@ -2137,7 +2140,7 @@ async function saveAuthorNovel(form) {
     route();
     return;
   }
-  const statusAction = formData.get("status_action") || "draft";
+  const statusAction = requestedStatusAction || form.getAttribute("data-default-status-action") || "draft";
   const coverFile = formData.get("cover_file");
   const existingCoverUrl = String(formData.get("existing_cover_url") || "").trim();
   const manualCoverUrl = String(formData.get("cover_url") || "").trim();
@@ -2157,20 +2160,27 @@ async function saveAuthorNovel(form) {
     return;
   }
 
-  const hasCover = Boolean(manualCoverUrl || existingCoverUrl || coverFile?.size);
-  if (statusAction === "publish" && !hasCover) {
-    appState.authorPortal.error = "الغلاف مطلوب عند النشر فقط. احفظها كمسودة الآن، أو أضف غلافا بنسبة 2:3 ويفضل 1200x1800.";
-    route();
-    return;
-  }
-
   appState.authorPortal.saving = true;
   appState.authorPortal.error = "";
   appState.authorPortal.message = "";
   route();
 
   try {
-    const uploadedCoverUrl = coverFile?.size ? await uploadNovelCover(client, user.id, coverFile) : "";
+    let uploadedCoverUrl = "";
+    let coverWarning = "";
+    if (coverFile?.size) {
+      try {
+        uploadedCoverUrl = await uploadNovelCover(client, user.id, coverFile);
+      } catch (coverError) {
+        coverWarning = " تم الحفظ بدون الغلاف، ويمكنك إضافته لاحقا.";
+        await logAuthorPortalException(client, coverError, {
+          action: "upload_author_cover",
+          mode,
+          book_id: bookId || null,
+          cover_size: coverFile.size || 0,
+        });
+      }
+    }
     payload.cover_url = uploadedCoverUrl || manualCoverUrl || existingCoverUrl || null;
     let result;
     if (mode === "edit") {
@@ -2189,7 +2199,10 @@ async function saveAuthorNovel(form) {
 
     if (result.error) throw result.error;
     if (!result.data?.length) throw new Error("لم يتم حفظ أي صف. تحقق من ملكية الرواية.");
-    appState.authorPortal.message = mode === "edit" ? "تم تحديث الرواية." : "تم إنشاء الرواية مع الغلاف.";
+    const actionMessage = statusAction === "publish"
+      ? mode === "edit" ? "تم تحديث الرواية ونشرها." : "تم نشر الرواية."
+      : mode === "edit" ? "تم تحديث المسودة." : "تم حفظ المسودة.";
+    appState.authorPortal.message = `${actionMessage}${coverWarning}`;
     appState.authorPortal.loaded = false;
     await loadAuthorPortal({ force: true });
     window.location.hash = statusAction === "publish" ? "/author/published" : "/author/drafts";
@@ -3169,16 +3182,15 @@ function NovelForm(mode, book = books[0]) {
   return AuthorDashboardLayout(
     mode === "create" ? "/author/novels/new" : "/author/novels",
     `
-      <div class="page-title"><span class="eyebrow">${mode === "create" ? dual("إنشاء رواية", "Create Novel") : dual("تحرير رواية", "Edit Novel")}</span><h1>${title}</h1><p>احفظ الرواية كمسودة، أو انشرها بعد إضافة الغلاف والبيانات المطلوبة.</p></div>
+      <div class="page-title"><span class="eyebrow">${mode === "create" ? dual("إنشاء رواية", "Create Novel") : dual("تحرير رواية", "Edit Novel")}</span><h1>${title}</h1><p>اكتب العنوان واضغط نشر الآن. الغلاف والملخص اختياريان ويمكن إضافتهما لاحقا.</p></div>
       ${appState.authorPortal.error ? `<p class="auth-alert error">${escapeHtml(appState.authorPortal.error)}</p>` : ""}
-      <form class="editor-form" data-author-novel-form data-novel-mode="${mode}" data-book-id="${escapeHtml(activeBook.id || "")}">
+      <form class="editor-form" data-author-novel-form data-novel-mode="${mode}" data-book-id="${escapeHtml(activeBook.id || "")}" data-default-status-action="${defaultStatusAction}">
         <label><span>عنوان الرواية</span><input name="title_ar" value="${escapeHtml(activeBook.title || "")}" placeholder="مثال: مدينة الحبر الأخيرة" required /></label>
         <label><span>التصنيف</span><select name="category_id" required>${categoryOptions}</select></label>
-        <label><span>الحالة</span><select name="status_action"><option value="draft" ${defaultStatusAction === "draft" ? "selected" : ""}>حفظ كمسودة</option><option value="publish" ${defaultStatusAction === "publish" ? "selected" : ""}>نشر</option></select></label>
         <label>
-          <span>غلاف الرواية</span>
+          <span>غلاف اختياري</span>
           <input name="cover_file" type="file" accept="image/jpeg,image/jpg,image/png,image/webp" />
-          <small>يمكن حفظ المسودة بدون غلاف. عند النشر أضف صورة بنسبة 2:3، ويفضل 1200x1920 إلى 1600x2560، وبحد أقصى 2MB.</small>
+          <small>اختر أي صورة مناسبة إن وجدت. سنضغطها تلقائيا، وإذا تعذر رفعها سنحفظ الرواية بدون غلاف.</small>
           <div data-author-cover-upload-status>${AuthorCoverUploadNotice()}</div>
         </label>
         <label>
@@ -3189,7 +3201,8 @@ function NovelForm(mode, book = books[0]) {
         ${activeBook.coverUrl ? `<div class="cover-preview">${BookCover(activeBook)}<span>الغلاف الحالي</span></div>` : ""}
         <label class="full"><span>الملخص</span><textarea name="description_ar" rows="6">${escapeHtml(activeBook.summary || "")}</textarea></label>
         <div class="form-actions">
-          <button class="btn primary" type="submit" ${appState.authorPortal.saving ? "disabled" : ""}>${appState.authorPortal.saving ? "جار الحفظ..." : "حفظ"}</button>
+          <button class="btn secondary" type="submit" data-status-action="draft" ${appState.authorPortal.saving ? "disabled" : ""}>${appState.authorPortal.saving ? "جار الحفظ..." : "حفظ كمسودة"}</button>
+          <button class="btn primary" type="submit" data-status-action="publish" ${appState.authorPortal.saving ? "disabled" : ""}>${appState.authorPortal.saving ? "جار النشر..." : "نشر الآن"}</button>
           <a class="btn secondary" href="#/author/novels">عودة</a>
         </div>
       </form>
@@ -3755,7 +3768,8 @@ function bindInteractions() {
   document.querySelectorAll("[data-author-novel-form]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      saveAuthorNovel(form);
+      const statusAction = event.submitter?.getAttribute("data-status-action") || "";
+      saveAuthorNovel(form, statusAction);
     });
   });
 
@@ -3770,11 +3784,11 @@ function bindInteractions() {
       }
       try {
         validateAuthorCoverFile(file);
-        const sizeMessage = `حجم الغلاف الحالي ${formatFileSize(file.size)}. الحد الأقصى ${formatFileSize(AUTHOR_COVER_MAX_BYTES)}.`;
+        const sizeMessage = `حجم الغلاف الحالي ${formatFileSize(file.size)}. سنضغطه تلقائيا قبل الرفع.`;
         setAuthorCoverUploadStatus(
           file.size > AUTHOR_COVER_MAX_BYTES || file.type !== "image/jpeg"
-            ? `${sizeMessage} سيتم تحسينه وتحويله إلى JPEG قبل الرفع.`
-            : sizeMessage,
+            ? sizeMessage
+            : `${sizeMessage} جاهز للرفع.`,
           0,
           false,
         );

@@ -1,0 +1,17 @@
+lib/MixScreens/AccountInfoScreen.dart
+lib/MixScreens/BookEditScreens/BookDetailEditScreen.dart
+lib/MixScreens/BooksScreens/AuthorViewByUserScreen.dart
+lib/MixScreens/BooksScreens/BookDetailsAuthor.dart
+lib/MixScreens/BooksScreens/BookViewTab.dart
+lib/MixScreens/PieChartScreen.dart
+lib/MixScreens/ProfileScreens/HomeProfileScreen.dart
+lib/MixScreens/SEARCHSCREENS/AuthorSearchScreen.dart
+lib/MixScreens/SEARCHSCREENS/GeneralCategoriesSearchScreen.dart
+lib/MixScreens/Uploadscreens/BookUploadEditTabScreen.dart
+lib/MixScreens/Uploadscreens/UploadDataScreen.dart
+lib/MixScreens/Uploadscreens/UploadDatanextScreen.dart
+lib/MixScreens/Uploadscreens/upload_history_screen.dart
+lib/MixScreens/author_profile_links.dart
+lib/UserAuthScreen/SignUpScreens/signUpScreen_Author.dart
+lib/UserAuthScreen/SignUpScreens/signUpScreen_Third.dart
+lib/UserAuthScreen/login_screen.dart

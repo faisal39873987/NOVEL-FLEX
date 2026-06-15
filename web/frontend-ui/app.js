@@ -1794,6 +1794,20 @@ function findAuthorChapter(bookId, chapterId) {
   return authorChaptersForBook(bookId).find((chapter) => chapter.id === chapterId) || null;
 }
 
+function authorPermissionError() {
+  if (!appState.auth.user) return "يجب تسجيل الدخول قبل تنفيذ هذا الإجراء.";
+  if (!hasWriterRole()) return "هذا الإجراء يتطلب دور writer أو admin في ملف المستخدم.";
+  return "";
+}
+
+function requireOwnedAuthorBook(bookId) {
+  const permissionError = authorPermissionError();
+  if (permissionError) return { error: permissionError, book: null };
+  const book = findAuthorNovel(bookId);
+  if (!book) return { error: "لا يمكن تنفيذ الإجراء على رواية لا تملكها.", book: null };
+  return { error: "", book };
+}
+
 async function loadAuthorChapters(bookId, { force = false } = {}) {
   if (!bookId) return;
   if (appState.authorPortal.loadingChapters.has(bookId)) return;
@@ -1847,9 +1861,9 @@ async function saveAuthorChapter(form) {
   const mode = form.getAttribute("data-chapter-mode");
   const bookId = form.getAttribute("data-book-id");
   const chapterId = form.getAttribute("data-chapter-id");
-  const book = findAuthorNovel(bookId);
-  if (!book) {
-    appState.authorPortal.error = "لا يمكن حفظ فصل لرواية لا تملكها.";
+  const { error: ownerError, book } = requireOwnedAuthorBook(bookId);
+  if (ownerError) {
+    appState.authorPortal.error = ownerError;
     route();
     return;
   }
@@ -1859,6 +1873,11 @@ async function saveAuthorChapter(form) {
   const manualCoverUrl = String(formData.get("cover_url") || "").trim();
   const existingCoverUrl = String(formData.get("existing_cover_url") || "").trim();
   const existingChapter = mode === "edit" ? findAuthorChapter(bookId, chapterId) : null;
+  if (mode === "edit" && !existingChapter) {
+    appState.authorPortal.error = "لا يمكن تعديل فصل غير موجود ضمن روايتك.";
+    route();
+    return;
+  }
   const keepPublishedAt = existingChapter?.rawStatus === "published" ? existingChapter.publishedAt : "";
   const payload = {
     book_id: bookId,
@@ -1903,6 +1922,7 @@ async function saveAuthorChapter(form) {
             .limit(1);
 
     if (result.error) throw result.error;
+    if (!result.data?.length) throw new Error("لم يتم حفظ أي صف. تحقق من ملكية الرواية والفصل.");
     appState.authorPortal.message = mode === "edit" ? "تم تحديث الفصل." : "تم إنشاء الفصل.";
     if (payload.status === "published") {
       await notifyNewChapterPublished(book, {
@@ -1923,8 +1943,14 @@ async function saveAuthorChapter(form) {
 
 async function deleteAuthorChapter(bookId, chapterId) {
   const client = supabaseClient();
-  const book = findAuthorNovel(bookId);
-  if (!client || !book) return;
+  if (!client) return;
+  const { error: ownerError } = requireOwnedAuthorBook(bookId);
+  const chapter = findAuthorChapter(bookId, chapterId);
+  if (ownerError || !chapter) {
+    appState.authorPortal.error = ownerError || "لا يمكن حذف فصل غير موجود ضمن روايتك.";
+    route();
+    return;
+  }
 
   appState.authorPortal.saving = true;
   appState.authorPortal.error = "";
@@ -1932,8 +1958,9 @@ async function deleteAuthorChapter(bookId, chapterId) {
   route();
 
   try {
-    const { error } = await client.from("chapters").delete().eq("id", chapterId).eq("book_id", bookId);
+    const { data, error } = await client.from("chapters").delete().eq("id", chapterId).eq("book_id", bookId).select("id").limit(1);
     if (error) throw error;
+    if (!data?.length) throw new Error("لم يتم حذف أي صف. تحقق من ملكية الرواية والفصل.");
     appState.authorPortal.message = "تم حذف الفصل.";
     appState.authorPortal.chaptersByBook.delete(bookId);
     await loadAuthorChapters(bookId, { force: true });
@@ -1947,6 +1974,12 @@ async function deleteAuthorChapter(bookId, chapterId) {
 
 async function reorderAuthorChapter(bookId, chapterId, direction) {
   const client = supabaseClient();
+  const { error: ownerError } = requireOwnedAuthorBook(bookId);
+  if (ownerError) {
+    appState.authorPortal.error = ownerError;
+    route();
+    return;
+  }
   const list = authorChaptersForBook(bookId);
   const index = list.findIndex((chapter) => chapter.id === chapterId);
   const targetIndex = direction === "up" ? index - 1 : index + 1;
@@ -1960,12 +1993,13 @@ async function reorderAuthorChapter(bookId, chapterId, direction) {
 
   try {
     const updates = [
-      client.from("chapters").update({ chapter_number: target.number, updated_at: new Date().toISOString() }).eq("id", current.id).eq("book_id", bookId),
-      client.from("chapters").update({ chapter_number: current.number, updated_at: new Date().toISOString() }).eq("id", target.id).eq("book_id", bookId),
+      client.from("chapters").update({ chapter_number: target.number, updated_at: new Date().toISOString() }).eq("id", current.id).eq("book_id", bookId).select("id").limit(1),
+      client.from("chapters").update({ chapter_number: current.number, updated_at: new Date().toISOString() }).eq("id", target.id).eq("book_id", bookId).select("id").limit(1),
     ];
     const results = await Promise.all(updates);
     const failed = results.find((result) => result.error);
     if (failed) throw failed.error;
+    if (results.some((result) => !result.data?.length)) throw new Error("لم يتم تحديث ترتيب الفصول. تحقق من الملكية.");
     appState.authorPortal.message = "تم تحديث ترتيب الفصول.";
     appState.authorPortal.chaptersByBook.delete(bookId);
     await loadAuthorChapters(bookId, { force: true });
@@ -2109,6 +2143,11 @@ async function saveAuthorNovel(form) {
   const formData = new FormData(form);
   const mode = form.getAttribute("data-novel-mode");
   const bookId = form.getAttribute("data-book-id");
+  if (mode === "edit" && !findAuthorNovel(bookId)) {
+    appState.authorPortal.error = "لا يمكن تعديل رواية لا تملكها.";
+    route();
+    return;
+  }
   const statusAction = formData.get("status_action") || "draft";
   const coverFile = formData.get("cover_file");
   const existingCoverUrl = String(formData.get("existing_cover_url") || "").trim();
@@ -2160,6 +2199,7 @@ async function saveAuthorNovel(form) {
     }
 
     if (result.error) throw result.error;
+    if (!result.data?.length) throw new Error("لم يتم حفظ أي صف. تحقق من ملكية الرواية.");
     appState.authorPortal.message = mode === "edit" ? "تم تحديث الرواية." : "تم إنشاء الرواية مع الغلاف.";
     appState.authorPortal.loaded = false;
     await loadAuthorPortal({ force: true });
@@ -3062,7 +3102,7 @@ function AuthorAccessGate() {
 
 function hasWriterAccess() {
   const role = appState.authorPortal.profile?.role || "";
-  return ["writer", "admin"].includes(role) || Boolean(appState.authorPortal.author);
+  return ["writer", "admin"].includes(role);
 }
 
 function hasWriterRole() {
@@ -3346,6 +3386,9 @@ function AdminAccessGate(active = "dashboard") {
   }
   if (appState.adminPortal.error) {
     return PageShell("/admin", EmptyState("تعذر فتح لوحة الإدارة", appState.adminPortal.error, "/"));
+  }
+  if (!isAdminUser()) {
+    return PageShell("/admin", EmptyState("صلاحية غير كافية", "لوحة الإدارة مخصصة لحسابات role admin فقط.", "/"));
   }
   return "";
 }

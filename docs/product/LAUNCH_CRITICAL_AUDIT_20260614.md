@@ -200,10 +200,10 @@ Status: **FAIL**
 Evidence:
 
 - App links privacy and terms to:
-  - `https://www.novelflex.com/privacy-policy`
-  - `https://www.novelflex.com/terms`
-- `www.novelflex.com` currently fails SSL verification because the certificate is expired.
-- Live `novelflex.online` paths return `404`:
+  - `https://novelflex.online/privacy-policy`
+  - `https://novelflex.online/terms`
+- Previous legacy `.com` links were moved to `novelflex.online` in app/web metadata to avoid the expired SSL host.
+- Live `novelflex.online` legal paths are now published:
   - `https://novelflex.online/privacy-policy`
   - `https://novelflex.online/terms`
 - Account deletion button exists, but calls legacy endpoint:
@@ -230,7 +230,7 @@ High risk:
 - Facebook provider remains enabled in Supabase with bad client ID.
 - Payment/subscription/wallet/ad code references remain in the app while monetization is not launch scope.
 - App-level `PrivacyInfo.xcprivacy` is missing.
-- iOS associated domains still point to `applinks:www.novelflex.com` instead of the live domain.
+- iOS associated domains now point to the live `applinks:novelflex.online` domain.
 
 Medium risk:
 
@@ -261,7 +261,7 @@ Medium risk:
 
 1. Create production-safe account deletion backend.
 2. Publish working privacy and terms pages on `novelflex.online`.
-3. Change app legal links from `www.novelflex.com` to `novelflex.online`.
+3. Verify the deployed legal pages after the app legal links were changed to `novelflex.online`.
 4. Add app-level iOS `PrivacyInfo.xcprivacy`.
 5. Seed or create one real approved writer, book, and published chapter for QA.
 

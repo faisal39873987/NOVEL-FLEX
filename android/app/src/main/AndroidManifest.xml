@@ -50,7 +50,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https"/>
-                <data android:host="www.novelflex.com"/>
+                <data android:host="novelflex.online"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

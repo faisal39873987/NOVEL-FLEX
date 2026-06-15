@@ -142,8 +142,8 @@ Supabase Storage bucket API returned:
 1. Sensitive credential material exists inside the project workspace:
 
 ```text
-key/google sign in keys/client_secret_*.json
-key/apple signe in/AuthKey_*.p8
+Google OAuth client secret JSON files under key/google sign in keys/
+Apple Sign in with Apple private key files under key/apple signe in/
 ```
 
 These must not live in the application repository or deploy artifact.

@@ -1,3 +1,4 @@
+import '../../core/errors/app_exception.dart';
 import '../services/supabase_database_service.dart';
 import '../utils/supabase_query.dart';
 
@@ -212,6 +213,7 @@ class SupabaseBookRepository {
   Future<Map<String, dynamic>> createBook(CreateBookInput input) {
     return _database.run(
       () async {
+        await _requireWriterOrAdminForAuthor(input.authorId);
         final response = await _database
             .table(SupabaseTables.books)
             .insert(input.toJson())
@@ -227,6 +229,7 @@ class SupabaseBookRepository {
   Future<Map<String, dynamic>> createChapter(CreateChapterInput input) {
     return _database.run(
       () async {
+        await _requireBookOwnership(input.bookId);
         final response = await _database
             .table(SupabaseTables.chapters)
             .insert(input.toJson())
@@ -245,6 +248,7 @@ class SupabaseBookRepository {
   ) {
     return _database.run(
       () async {
+        await _requireBookOwnership(bookId);
         final response = await _database
             .table(SupabaseTables.books)
             .update(<String, dynamic>{
@@ -264,6 +268,7 @@ class SupabaseBookRepository {
   Future<void> softDeleteBook(String bookId) {
     return _database.run(
       () async {
+        await _requireBookOwnership(bookId);
         await _database.table(SupabaseTables.books).update(<String, dynamic>{
           'status': 'archived',
           'updated_at': DateTime.now().toUtc().toIso8601String(),
@@ -271,5 +276,107 @@ class SupabaseBookRepository {
       },
       message: 'Failed to delete book.',
     );
+  }
+
+  Future<Map<String, dynamic>> updateChapter(
+    String chapterId,
+    Map<String, dynamic> fields,
+  ) {
+    return _database.run(
+      () async {
+        final chapter = await _getOwnedChapter(chapterId);
+        final response = await _database
+            .table(SupabaseTables.chapters)
+            .update(<String, dynamic>{
+              ...fields,
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            }..removeWhere((_, value) => value == null))
+            .eq('id', chapter['id'] as String)
+            .eq('book_id', chapter['book_id'] as String)
+            .select(_chapterSelect)
+            .single();
+
+        return _database.map(response);
+      },
+      message: 'Failed to update chapter.',
+    );
+  }
+
+  Future<void> deleteChapter(String chapterId) {
+    return _database.run(
+      () async {
+        final chapter = await _getOwnedChapter(chapterId);
+        await _database
+            .table(SupabaseTables.chapters)
+            .delete()
+            .eq('id', chapter['id'] as String)
+            .eq('book_id', chapter['book_id'] as String);
+      },
+      message: 'Failed to delete chapter.',
+    );
+  }
+
+  Future<void> _requireWriterOrAdminForAuthor(String authorId) async {
+    final user = _database.client.auth.currentUser;
+    if (user == null) {
+      throw const AppSessionException('Sign in before managing novels.');
+    }
+    if (user.id != authorId) {
+      throw const AppAuthException('Cannot create a novel for another author.');
+    }
+    final profile = await _currentProfile();
+    final role = (profile?['role'] ?? 'reader').toString();
+    if (role != 'writer' && role != 'admin') {
+      throw const AppAuthException('Creating novels requires writer or admin.');
+    }
+  }
+
+  Future<void> _requireBookOwnership(String bookId) async {
+    final book = await _bookForOwnership(bookId);
+    final user = _database.client.auth.currentUser;
+    final profile = await _currentProfile();
+    final role = (profile?['role'] ?? 'reader').toString();
+    if (role == 'admin') return;
+    if (role != 'writer' || user == null || book['author_id'] != user.id) {
+      throw const AppAuthException('You do not own this novel.');
+    }
+  }
+
+  Future<Map<String, dynamic>> _getOwnedChapter(String chapterId) async {
+    final response = await _database
+        .table(SupabaseTables.chapters)
+        .select('id,book_id')
+        .eq('id', chapterId)
+        .maybeSingle();
+    final chapter = _database.nullableMap(response);
+    if (chapter == null) {
+      throw const AppDatabaseException('Chapter not found.');
+    }
+    await _requireBookOwnership(chapter['book_id'] as String);
+    return chapter;
+  }
+
+  Future<Map<String, dynamic>> _bookForOwnership(String bookId) async {
+    final response = await _database
+        .table(SupabaseTables.books)
+        .select('id,author_id')
+        .eq('id', bookId)
+        .maybeSingle();
+    final book = _database.nullableMap(response);
+    if (book == null) {
+      throw const AppDatabaseException('Novel not found.');
+    }
+    return book;
+  }
+
+  Future<Map<String, dynamic>?> _currentProfile() async {
+    final user = _database.client.auth.currentUser;
+    if (user == null) return null;
+    final response = await _database
+        .table(SupabaseTables.profiles)
+        .select('id,role')
+        .eq('id', user.id)
+        .maybeSingle();
+    return _database.nullableMap(response);
   }
 }

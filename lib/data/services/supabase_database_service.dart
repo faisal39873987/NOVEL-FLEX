@@ -42,6 +42,8 @@ class SupabaseDatabaseService {
   }) async {
     try {
       return await operation();
+    } on AppException {
+      rethrow;
     } catch (error) {
       throw AppDatabaseException(message, cause: error);
     }

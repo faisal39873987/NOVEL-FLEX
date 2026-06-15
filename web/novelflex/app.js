@@ -266,7 +266,7 @@ const academyPosts = [
 ];
 
 const app = document.querySelector("#app");
-const SEO_BASE_URL = "https://www.novelflex.com";
+const SEO_BASE_URL = "https://novelflex.online";
 const SEO_DEFAULT_IMAGE = `${SEO_BASE_URL}/assets/home_screen.jpg`;
 const CACHE_VERSION = "v1";
 const CACHE_TTL = {

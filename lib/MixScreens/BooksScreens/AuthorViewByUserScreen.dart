@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:more_loading_gif/more_loading_gif.dart';
-import 'package:novelflex/MixScreens/StripePayment/GiftScreen.dart';
 import 'package:provider/provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
@@ -11,7 +10,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:transitioner/transitioner.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../Models/AuthorProfileViewModel.dart';
-import '../../Models/UserStatusTypeModel.dart';
 import '../../Provider/UserProvider.dart';
 import '../../Utils/ApiUtils.dart';
 import '../../Utils/Constants.dart';
@@ -22,7 +20,7 @@ import '../../localization/Language/languages.dart';
 import 'BookDetail.dart';
 
 class AuthorViewByUserScreen extends StatefulWidget {
-  String user_id;
+  final String user_id;
   AuthorViewByUserScreen({Key? key, required this.user_id}) : super(key: key);
 
   @override
@@ -31,36 +29,23 @@ class AuthorViewByUserScreen extends StatefulWidget {
 
 class _AuthorViewByUserScreenState extends State<AuthorViewByUserScreen> {
   AuthorProfileViewModel? _authorProfileViewModel;
-  UserStatusTypeModel? _userStatusTypeModel;
 
-  final _giftKey = GlobalKey<FormFieldState>();
-
-  TextEditingController? _giftController;
   bool _isLoading = false;
   bool _followLoading = false;
   bool _isInternetConnected = true;
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   Stream? stream;
-  final bool _isImageLoading = false;
-  File? _cover_imageFile;
   bool? FollowOrUnfollow;
   int? Status;
 
   @override
   void initState() {
     super.initState();
-    _giftController = TextEditingController();
     _checkInternetConnection();
   }
 
   @override
   void dispose() {
-    _giftController!.dispose();
     super.dispose();
-  }
-
-  _listener() {
-    Status = 0;
   }
 
   @override
@@ -151,10 +136,15 @@ class _AuthorViewByUserScreenState extends State<AuthorViewByUserScreen> {
                                   Positioned(
                                       top: height * 0.08,
                                       width: width * 0.38,
-                                      child: Status== 1 ?  const CircleAvatar(
-                                        radius: 8,
-                                        backgroundColor: Color(0xff00bb23),
-                                      ) : Container(color: Colors.transparent,))
+                                      child: Status == 1
+                                          ? const CircleAvatar(
+                                              radius: 8,
+                                              backgroundColor:
+                                                  Color(0xff00bb23),
+                                            )
+                                          : Container(
+                                              color: Colors.transparent,
+                                            ))
                                 ],
                               ),
                               SizedBox(
@@ -241,7 +231,8 @@ class _AuthorViewByUserScreenState extends State<AuthorViewByUserScreen> {
                                   ),
                                   child: GestureDetector(
                                     onTap: () {
-                                      _createDynamicLinkShort(); },
+                                      _createDynamicLinkShort();
+                                    },
                                     child: Container(
                                       width: width * 0.25,
                                       height: height * 0.04,
@@ -263,8 +254,7 @@ class _AuthorViewByUserScreenState extends State<AuthorViewByUserScreen> {
                                           ),
                                           Text(Languages.of(context)!.profile,
                                               style: const TextStyle(
-                                                  color:
-                                                      Color(0xff3a6c83),
+                                                  color: Color(0xff3a6c83),
                                                   fontWeight: FontWeight.w800,
                                                   fontFamily: "Lato",
                                                   fontStyle: FontStyle.normal,
@@ -320,12 +310,10 @@ class _AuthorViewByUserScreenState extends State<AuthorViewByUserScreen> {
                                               ? const Icon(
                                                   Icons
                                                       .notification_add_outlined,
-                                                  color:
-                                                      Color(0xff3a6c83))
+                                                  color: Color(0xff3a6c83))
                                               : const Icon(
                                                   Icons.person_add,
-                                                  color:
-                                                      Color(0xff3a6c83),
+                                                  color: Color(0xff3a6c83),
                                                 ),
                                           Text(
                                               FollowOrUnfollow!
@@ -334,8 +322,7 @@ class _AuthorViewByUserScreenState extends State<AuthorViewByUserScreen> {
                                                   : Languages.of(context)!
                                                       .unfollow_text,
                                               style: const TextStyle(
-                                                  color:
-                                                      Color(0xff3a6c83),
+                                                  color: Color(0xff3a6c83),
                                                   fontWeight: FontWeight.w800,
                                                   fontFamily: "Lato",
                                                   fontStyle: FontStyle.normal,
@@ -373,14 +360,18 @@ class _AuthorViewByUserScreenState extends State<AuthorViewByUserScreen> {
                                         ),
                                         child: GestureDetector(
                                           onTap: () {
-                                            _giftSheet(context);
+                                            Constants.showToastBlack(
+                                              context,
+                                              "Gifts are disabled in the MVP while creator support is migrated.",
+                                            );
                                           },
                                           child: Container(
                                             width: width * 0.25,
                                             height: height * 0.04,
                                             decoration: BoxDecoration(
-                                                borderRadius: const BorderRadius.all(
-                                                    Radius.circular(5)),
+                                                borderRadius:
+                                                    const BorderRadius.all(
+                                                        Radius.circular(5)),
                                                 border: Border.all(
                                                     color: Colors.white,
                                                     width: 1),
@@ -915,10 +906,8 @@ class _AuthorViewByUserScreenState extends State<AuthorViewByUserScreen> {
 
     if (response.statusCode == 200) {
       print('author_profile${response.body}');
-      var jsonData = response.body;
       var jsonData1 = json.decode(response.body);
       if (jsonData1['status'] == 200) {
-        _userStatusTypeModel = userStatusTypeModelFromJson(jsonData);
         setState(() {
           _isLoading = false;
         });
@@ -948,7 +937,6 @@ class _AuthorViewByUserScreenState extends State<AuthorViewByUserScreen> {
 
     if (response.statusCode == 200) {
       print('author_profile${response.body}');
-      var jsonData = response.body;
       var jsonData1 = json.decode(response.body);
       if (jsonData1['status'] == 200) {
         // _authorProfileViewModel = authorProfileViewModelFromJson(jsonData);
@@ -987,140 +975,6 @@ class _AuthorViewByUserScreenState extends State<AuthorViewByUserScreen> {
     }
   }
 
-  void _giftSheet(context) {
-    showModalBottomSheet(
-        context: context,
-        backgroundColor: const Color(0xffebf5f9),
-        shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30), topRight: Radius.circular(30))),
-        builder: (BuildContext bc) {
-          var height = MediaQuery.of(context).size.height;
-          var width = MediaQuery.of(context).size.width;
-          return Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                SizedBox(
-                    height: height * 0.2,
-                    width: width * 0.4,
-                    child: Image.asset(
-                      "assets/quotes_data/new_gifts.gif",
-                    )),
-                Text(Languages.of(context)!.giftText),
-                SizedBox(
-                  height: height * 0.1,
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                        vertical: height * 0.02, horizontal: width * 0.04),
-                    child: TextFormField(
-                      key: _giftKey,
-                      controller: _giftController,
-                      keyboardType: TextInputType.number,
-                      cursorColor: Colors.black,
-                      decoration: InputDecoration(
-                          errorMaxLines: 3,
-                          counterText: "",
-                          filled: true,
-                          fillColor: Colors.white,
-                          focusedBorder: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Colors.white12,
-                            ),
-                          ),
-                          disabledBorder: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Color(0xFF256D85),
-                            ),
-                          ),
-                          enabledBorder: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Color(0xFF256D85),
-                            ),
-                          ),
-                          border: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                            ),
-                          ),
-                          errorBorder: const OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(10)),
-                              borderSide: BorderSide(
-                                width: 1,
-                                color: Colors.red,
-                              )),
-                          focusedErrorBorder: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide(
-                              width: 1,
-                              color: Colors.red,
-                            ),
-                          ),
-                          hintText: Languages.of(context)!.dollar,
-                          // labelText: Languages.of(context)!.email,
-                          hintStyle: const TextStyle(
-                            fontFamily: Constants.fontfamily,
-                          )),
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    if (_giftController!.text.trim() != "" &&
-                        int.parse(_giftController!.text.trim()) >= 5) {
-                      Transitioner(
-                        context: context,
-                        child: GiftScreen(
-                          author_id:
-                              _authorProfileViewModel!.data.id.toString(),
-                          amount: _giftController!.text.trim().toString(),
-                        ),
-                        animation: AnimationType.slideLeft, // Optional value
-                        duration:
-                            const Duration(milliseconds: 1000), // Optional value
-                        replacement: true, // Optional value
-                        curveType: CurveType.decelerate, // Optional value
-                      );
-                    } else {
-                      Constants.showToastBlack(
-                          context, "Please enter at least 5 \$ ");
-                    }
-                  },
-                  child: Container(
-                      height: height * 0.07,
-                      width: width * 0.9,
-                      padding: EdgeInsets.symmetric(
-                          vertical: height * 0.02, horizontal: width * 0.04),
-                      decoration: BoxDecoration(
-                          color: const Color(0xFF256D85),
-                          borderRadius: BorderRadius.circular(30)),
-                      child: Center(
-                          child: Text(
-                        Languages.of(context)!.gift,
-                        style: const TextStyle(
-                            color: Color(0xffffffff),
-                            fontWeight: FontWeight.w700,
-                            fontFamily: "Lato",
-                            fontStyle: FontStyle.normal,
-                            fontSize: 14.0),
-                      ))),
-                ),
-              ],
-            ),
-          );
-        });
-  }
-
   _launchProfileUrls(var link) async {
     var url = Uri.parse(link.toString());
     if (await canLaunchUrl(url)) {
@@ -1132,10 +986,9 @@ class _AuthorViewByUserScreenState extends State<AuthorViewByUserScreen> {
 
   Future<void> _createDynamicLinkShort() async {
     final String link =
-        "https://www.novelflex.com/?user_Id=${_authorProfileViewModel!.data.id}";
+        "https://novelflex.online/?user_Id=${_authorProfileViewModel!.data.id}";
 
-    await Share.share(link);
+    await SharePlus.instance.share(ShareParams(text: link));
     print("url_share $link");
-
   }
 }

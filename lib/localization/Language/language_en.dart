@@ -713,7 +713,7 @@ class LanguageEn extends Languages {
 
   @override
   String get disclaimer =>
-      "NovelFlex hosts books, PDFs, audio, images, profiles, and reviews that may be submitted by users and authors. Authors are responsible for owning or having permission to publish their content. If you believe content violates your rights, copyright, or our community rules, contact support@novelflex.com with the content details so NovelFlex can review and remove it when appropriate.";
+      "NovelFlex hosts books, PDFs, audio, images, profiles, and reviews that may be submitted by users and authors. Authors are responsible for owning or having permission to publish their content. If you believe content violates your rights, copyright, or our community rules, contact support@novelflex.online with the content details so NovelFlex can review and remove it when appropriate.";
 
   @override
   String get discliamr_bar => "Disclaimer";

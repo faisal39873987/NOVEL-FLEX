@@ -13,8 +13,8 @@ a temporary local quarantine outside the repository:
 
 Files moved:
 
-- `key/google sign in keys/client_secret_*.json`
-- `key/apple signe in/AuthKey_*.p8`
+- Google OAuth client secret JSON files under `key/google sign in keys/`
+- Apple Sign in with Apple private key files under `key/apple signe in/`
 - `key/web key shh/novelflex.pub`
 
 The public SSH key is not a private secret, but it was moved with the rest of
@@ -28,8 +28,8 @@ credentials folder.
 - `.env`
 - `.env.*`
 - `key/`
-- `client_secret_*.json`
-- `AuthKey_*.p8`
+- Google OAuth client secret JSON filename patterns
+- Apple private key filename patterns
 - private key-like extensions: `.p8`, `.pem`, `.key`
 
 ## Required External Rotation
@@ -47,6 +47,6 @@ project workspace, treat them as exposed:
 
 After the move, the project workspace no longer contains:
 
-- `BEGIN PRIVATE KEY`
-- `client_secret_*.json`
-- `AuthKey_*.p8`
+- private-key PEM markers
+- Google OAuth client secret JSON filename patterns
+- Apple private key filename patterns

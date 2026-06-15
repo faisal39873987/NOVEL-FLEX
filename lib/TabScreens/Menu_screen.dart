@@ -41,8 +41,8 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
   static const String _privacyPolicyUrl =
-      'https://www.novelflex.com/privacy-policy';
-  static const String _termsUrl = 'https://www.novelflex.com/terms';
+      'https://novelflex.online/privacy-policy';
+  static const String _termsUrl = 'https://novelflex.online/terms';
 
   StatusCheckModel? _statusCheckModel;
   MenuProfileModel? _menuProfileModel;
@@ -219,8 +219,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                                 height: height * 0.03,
                               ),
                               Visibility(
-                                visible:
-                                    _statusCheckModel!.data.type == "Writer",
+                                visible: false,
                                 child: GestureDetector(
                                   onTap: () {
                                     Transitioner(
@@ -383,8 +382,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                                 ),
                               ),
                               Visibility(
-                                visible:
-                                    _statusCheckModel!.data.type == "Writer",
+                                visible: false,
                                 child: GestureDetector(
                                   onTap: () {
                                     CHECK_STATUS_Publish();
@@ -572,8 +570,7 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                                 ),
                               ),
                               Visibility(
-                                visible:
-                                    _statusCheckModel!.data.type == "Writer",
+                                visible: false,
                                 child: GestureDetector(
                                   onTap: () {
                                     Transitioner(
@@ -1075,27 +1072,27 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
       subject: '',
       body: '',
     );
-    await launch('$mailtoLink');
+    await launchUrl(Uri.parse('$mailtoLink'));
   }
 
   void supportTeam() async {
     final mailtoLink = Mailto(
-      to: ['support@novelflex.com'],
+      to: ['support@novelflex.online'],
       // cc: ['mjawadsagheer@gmail.com','asaad@estisharati.net'],
       subject: '',
       body: '',
     );
-    await launch('$mailtoLink');
+    await launchUrl(Uri.parse('$mailtoLink'));
   }
 
   void reportContent() async {
     final mailtoLink = Mailto(
-      to: ['support@novelflex.com'],
+      to: ['support@novelflex.online'],
       subject: 'NovelFlex content report',
       body:
           'Please include the content type, title, author, URL or book ID, and reason for review.',
     );
-    await launch('$mailtoLink');
+    await launchUrl(Uri.parse('$mailtoLink'));
   }
 
   void _launchLegalUrl(String url) async {
@@ -1248,18 +1245,12 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _createDynamicLink(var referralCode) async {
-    final link = "https://www.novelflex.com/?referral_code=$referralCode";
-    await Share.share(
-        'Congratulation You have been invited by ${context.read<UserProvider>().UserName} to NovelFlex $link');
-    print("url_share $link");
-  }
-
   Future<void> _createDynamicLinkShort2(var referralCode) async {
-    final link = "https://www.novelflex.com/?referral_code=$referralCode";
+    final link = "https://novelflex.online/?referral_code=$referralCode";
 
-    await Share.share(
-        'Congratulation You have been invited by ${context.read<UserProvider>().UserName} to NovelFlex $link');
+    await SharePlus.instance.share(ShareParams(
+        text:
+            'Congratulation You have been invited by ${context.read<UserProvider>().UserName} to NovelFlex $link'));
 
     print("url_share $link");
   }
